@@ -21,14 +21,92 @@ Mấy nhánh khác là nhánh làm việc, **đừng lấy**:
 | Nhánh | Là gì | Có nên lấy |
 | --- | --- | --- |
 | `ban-dung` | Bản gom gọn, đang dùng hằng ngày | **Có** |
-| `thu/bo-fixack` | Nhánh cũ, mã y hệt `ban-dung` nhưng lịch sử có 8 commit làm-rồi-rút-lại | Không |
-| `tong-hop`, `tong-hop-v2` | Các lần gom trước, đã cũ | Không |
-| `pr/*`, `fix/*`, `do/*`, `thu/*` | Từng nhánh nhỏ để gửi PR hoặc để đo | Không |
+| `pr/*`, `fix/*`, `do/*`, `proto/*` | Từng nhánh nhỏ để gửi PR hoặc để đo | Không |
+| `main`, `dev` | Chép theo kho gốc | Không |
 
-Dựng và chạy bộ kiểm:
+Các nhánh gom cũ `tong-hop`, `tong-hop-v2` và `thu/bo-fixack` **đã xoá ngày 13/09/2026**. Mọi vá
+còn giá trị của chúng đều nằm trong `ban-dung`.
+
+## Cài sang máy khác
+
+Các bước dưới đây cho Arch và CachyOS. Distro khác thì gói cần cài lấy ở mục "Yêu cầu hệ thống"
+trong `README.md`, các bước còn lại giống hệt.
+
+**1. Gỡ bản Lotus đóng gói sẵn, nếu máy đã có.** Không gỡ thì tệp của hai bản đè lên nhau, và lần
+cập nhật hệ thống sau sẽ báo lỗi tệp xung đột.
 
 ```
-cmake -B build-test -DCMAKE_BUILD_TYPE=Release
+pacman -Qs fcitx5-lotus
+sudo pacman -R fcitx5-lotus
+```
+
+**2. Cài công cụ dựng.**
+
+```
+sudo pacman -S --needed cmake extra-cmake-modules gcc go git python make pkgconf acl fcitx5 libinput hicolor-icon-theme python-qtpy python-dbus librsvg
+```
+
+**3. Tải mã và dựng.** Bắt buộc cài vào `/usr`: dịch vụ nền ghi cứng đường
+`/usr/bin/fcitx5-lotus-server`, cài chỗ khác thì máy chủ bàn phím ảo không chạy. Nhớ
+`--recurse-submodules`, vì lõi bộ gõ nằm ở kho con `bamboo-core`.
+
+```
+git clone --recurse-submodules -b ban-dung https://github.com/nguyenphivn/fcitx5-lotus.git
+cd fcitx5-lotus
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=/usr/lib
+cmake --build build -j8
+sudo cmake --install build
+```
+
+`CMAKE_BUILD_TYPE=Release` là để bật tối ưu tốc độ. Bỏ cờ này thì bản dựng không được tối ưu.
+
+**4. Bật máy chủ bàn phím ảo cho tài khoản của mình.**
+
+Bốn lệnh đầu tạo người dùng hệ thống `uinput_proxy`, nạp mô-đun bàn phím ảo và nạp luật quyền truy
+cập vừa cài, để khỏi phải khởi động lại máy.
+
+```
+sudo systemd-sysusers
+sudo modprobe uinput
+sudo udevadm control --reload-rules
+sudo udevadm trigger --subsystem-match=misc --subsystem-match=input
+sudo systemctl daemon-reload
+sudo systemctl enable --now fcitx5-lotus-server@$(whoami).service
+systemctl status fcitx5-lotus-server@$(whoami).service       # phải thấy active (running)
+```
+
+**5. Thêm bộ gõ.** Khởi động lại fcitx5 (hoặc đăng xuất rồi vào lại), mở "Fcitx5 Configuration" và
+thêm Lotus. Trên KDE Wayland: System Settings → Virtual Keyboard → chọn "Fcitx 5".
+
+**6. Đặt luật theo app giống máy gốc.** Sửa `~/.config/fcitx5/conf/lotus-app-rules.conf` (hoặc đặt
+trong cửa sổ cài đặt Lotus), rồi khởi động lại fcitx5:
+
+```
+firefox=3
+microsoft-edge=3
+Alacritty=3
+```
+
+Luật `firefox=3` chỉ an toàn trên bản này, vì cần vá lá chắn thanh địa chỉ ở nhóm E. Lá chắn nhận
+Firefox theo tên chương trình: bản Firefox mang tên khác (LibreWolf, Firefox Developer Edition)
+**chưa** được nhận. Trình duyệt họ Chromium khác (Chromium, Brave) tự khai ô địa chỉ giống Edge nên
+nhiều khả năng chạy, nhưng **chưa đo**.
+
+Máy gốc còn bật `WaitSurroundingEvent=True` trong `~/.config/fcitx5/conf/lotus.conf` (vá nhóm B,
+mặc định tắt). Vá thanh địa chỉ không phụ thuộc tuỳ chọn này, nhưng mọi lượt đo trên máy gốc đều
+chạy khi nó bật.
+
+**Cập nhật bản mới về sau:** trong thư mục `fcitx5-lotus`, chạy `git pull --recurse-submodules`,
+lặp lại bước 3, rồi `sudo systemctl restart fcitx5-lotus-server@$(whoami).service` và khởi động lại
+fcitx5.
+
+## Dựng và chạy bộ kiểm
+
+Phần kiểm thử mặc định TẮT trong CMake, phải bật bằng `-DBUILD_TESTING=ON`, không thì `ctest` báo 0
+bài:
+
+```
+cmake -B build-test -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 cmake --build build-test -j8
 unshare -Urn ctest --test-dir build-test        # phải ra 11/11
 ```
