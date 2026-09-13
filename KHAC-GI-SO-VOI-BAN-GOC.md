@@ -314,6 +314,13 @@ lỗi này vẫn là lỗi của Chromium (đã báo Chromium số 557316480), x
 
 ## Cấu hình nên đặt kèm
 
+**Khuyên dùng `Uinput (Super Smooth)` làm chế độ gõ chính** (chủ máy chốt 13/09/2026). Trong
+`lotus.conf` phải ghi đúng tên hiển thị `Mode=Uinput (Super Smooth)`; ghi `Mode=SuperSmooth` hay tên
+sai khác thì Lotus lặng lẽ quay về Preedit. Trong `lotus-app-rules.conf` dùng số `3`.
+
+**Dự định:** gộp ba chế độ uinput (`Uinput (Smooth)`, `Uinput (Super Smooth)`, `Uinput (Slow)`)
+thành một chế độ uinput duy nhất, lấy Super Smooth làm gốc. Chưa làm, chưa có kế hoạch kỹ thuật.
+
 Luật theo app đang dùng trên máy này:
 
 - **`firefox=3`** và **`microsoft-edge=3`** (Super Smooth). Chỉ đặt 3 được khi có vá ở nhóm E. Dùng

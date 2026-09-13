@@ -11,6 +11,24 @@ Trang này chỉ ghi **những gì khác với bản gốc**. Hướng dẫn dù
 - **Chi tiết từng vá, số đo, tác giả gốc trả lời ra sao, và hướng dẫn cài:**
   [KHAC-GI-SO-VOI-BAN-GOC.md](https://github.com/nguyenphivn/fcitx5-lotus/blob/ban-dung/KHAC-GI-SO-VOI-BAN-GOC.md)
 
+## Nên dùng chế độ nào
+
+**Khuyên dùng `Uinput (Super Smooth)` làm chế độ gõ chính.** Đây là chế độ bản này dùng hằng ngày cho
+trình duyệt (Firefox, Edge), web app như Lark, và terminal như Alacritty.
+
+- Đặt chung: trong cài đặt Lotus chọn chế độ mặc định là `Uinput (Super Smooth)`. Nếu sửa tay
+  `~/.config/fcitx5/conf/lotus.conf` thì phải ghi đúng tên hiển thị `Mode=Uinput (Super Smooth)`,
+  ghi sai tên Lotus sẽ lặng lẽ quay về Preedit.
+- Đặt theo từng app: trong `~/.config/fcitx5/conf/lotus-app-rules.conf` dùng số `3`, ví dụ
+  `firefox=3`.
+- Không khuyên chế độ Surrounding Text: bản này không sửa chế độ đó.
+- Lời khuyên này chỉ đúng cho bản fork. Super Smooth của bản gốc chưa có vá chống lặp chữ ở thanh
+  địa chỉ trình duyệt.
+
+**Dự định:** gộp ba chế độ uinput (`Uinput (Smooth)`, `Uinput (Super Smooth)`, `Uinput (Slow)`)
+thành **một chế độ uinput duy nhất**, lấy Super Smooth làm gốc, vì nó đã gần như hoàn hảo trong dùng
+hằng ngày. **Chưa làm.**
+
 ## Gõ nhanh hơn bản gốc ở đâu (chế độ uinput)
 
 Cải thiện chính của bản này nằm ở **chế độ uinput** (Smooth, Super Smooth): thay chữ nhanh hơn và
