@@ -114,6 +114,27 @@ unshare -Urn ctest --test-dir build-test        # phải ra 11/11
 
 Bản gốc `dev` chạy 9 bài. Bản này 11, vì có thêm hai bài kiểm ở nhóm D bên dưới.
 
+## Hiệu năng so với bản gốc (chế độ uinput)
+
+Bảng này cũng có ở trang đầu `.github/README.md`; sửa số thì sửa cả hai. Mã trong ngoặc là mục
+trong `RADAR.md` của repo workbench, nơi ghi cách đo.
+
+| Đo cái gì | Bản gốc → bản này | Điều kiện |
+| --- | --- | --- |
+| Thay một từ, từ lúc gửi phím xoá tới lúc gõ chữ mới: xoá 2 / 3 / 4 chữ | 14,5 / 21,8 / 31,2 → 12,4 / 16,3 / 20,5 ms (trung bình hai lượt) | Konsole, Smooth, 8/8 mỗi bản, bản gốc chạy cạnh bản mình cùng khung đo, 12/09/2026. Bản mình lúc đó chưa gom: khoảng cách phím xoá 2 ms, còn vá #489. Chỉ số này không tính thời gian bên trong máy chủ bàn phím ảo (B43ac) |
+| Khoảng cách giữa hai phím xoá, trung vị | 5,2 → 0,08–0,10 ms | Konsole, ô soạn Edge, Firefox hồ sơ riêng, Edge qua XWayland, 8/8; mức 2 ms là 2,18–2,21, mức 1 ms là 1,18–1,21 (B43ab, B43af, B43ai, B43aj) |
+| Chờ vô ích ở app không khai surrounding text, trung vị | 12,8 → 6,9 ms (xoá 4 chữ: 21,2 → 14,9 ms) | Edge qua XWayland, 16/16 lượt vào đúng nhánh vá; app Wayland thuần 0/16 nên không đổi (B43ae bị B43ag lật) |
+
+**Không cộng dồn các dòng trên:** mỗi dòng đo một thay đổi, ở bản dựng và app khác nhau. **Chưa có
+phép đo trọn vẹn** so nhánh `ban-dung` hiện tại (khoảng cách 0 ms) với bản gốc.
+
+**Lời khai kèm:** từng lần chênh vài mili giây, dưới ngưỡng cảm nhận. Mức 0 ms là lựa chọn riêng của
+máy này (đề xuất cho bản gốc là 2 ms); bàn phím ảo trong bộ đo gõ khoảng 25 ms một phím nên chưa bao
+giờ chạm trường hợp phím xoá chen vào lúc người gõ nhanh. Thay `sleep_for` bằng hẹn giờ ở chế độ
+Smooth (`edcc370`) chưa đo riêng; số nền của bản gốc là 4% phím làm fcitx5 đứng ≥ 8 ms, lâu nhất
+22,2 ms, trên 428 phím (B33). Super Smooth và Smooth chưa từng đo khác nhau về thời gian (B43v);
+"Super Smooth gõ tốt hơn" là chủ máy gõ tay.
+
 ## Nhóm A — lỗi gặp thật, đã báo, tác giả từ chối vá
 
 Hai miếng này tác giả đã đóng issue mà không sửa mã, và cả hai vẫn đứng vững. Mục thứ ba bên
@@ -286,6 +307,11 @@ nhận ra. Lượt đo đầu gặp 1/22 lần, lượt sau không gặp.
 
 **Cần luật:** `firefox=3`, `microsoft-edge=3` (xem mục cấu hình bên dưới).
 
+**Lỗi lặp chữ đầu ở thanh địa chỉ Chromium (`eê`, `toôi`) với chế độ uinput: đã sửa triệt để.**
+Chromium báo đúng phần tự điền đang bôi đen, nên ở Edge lá chắn đi theo cơ chế chắc chắn, không phải
+phép đoán. Chủ máy xác nhận ngày 13/09/2026. Chế độ Surrounding Text **không** được sửa: ở chế độ đó
+lỗi này vẫn là lỗi của Chromium (đã báo Chromium số 557316480), xem mục "không sửa".
+
 ## Cấu hình nên đặt kèm
 
 Luật theo app đang dùng trên máy này:
@@ -303,8 +329,6 @@ Nói rõ để khỏi mất công thử lại:
 - **Chế độ Surrounding Text vẫn lỗi.** Cơ chế surrounding text vốn không đáng tin: Firefox đẩy
   văn bản xung quanh trễ 58 đến 184 ms. Đã thử hướng "tin vào bộ đệm" và bị hồi quy ở ô soạn
   thảo giàu, đã rút lại. Chế độ 4 hỏng trên Firefox cũng thuộc nhóm này.
-- **Lỗi `eê` ở thanh địa chỉ Chromium** là lỗi của Chromium, đã báo lên Chromium số 557316480.
-  Không vá được từ phía bộ gõ.
 - **Máy chủ uinput chết giữa lúc thay chữ làm bàn phím chết theo.** Đã tái hiện được, bộ đo nằm
   ở `probes/vong_go/may_chu_chet_giua_chung.py` trong repo workbench. Chưa vá, đang trong hàng
   đợi gửi issue.

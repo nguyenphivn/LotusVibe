@@ -11,12 +11,40 @@ Trang này chỉ ghi **những gì khác với bản gốc**. Hướng dẫn dù
 - **Chi tiết từng vá, số đo, tác giả gốc trả lời ra sao, và hướng dẫn cài:**
   [KHAC-GI-SO-VOI-BAN-GOC.md](https://github.com/nguyenphivn/fcitx5-lotus/blob/ban-dung/KHAC-GI-SO-VOI-BAN-GOC.md)
 
+## Gõ nhanh hơn bản gốc ở đâu (chế độ uinput)
+
+Cải thiện chính của bản này nằm ở **chế độ uinput** (Smooth, Super Smooth): thay chữ nhanh hơn và
+không lặp chữ. Chế độ Surrounding Text **không** được sửa.
+
+Mọi số dưới đây đo trên máy gốc (CachyOS, KDE Plasma Wayland). Mỗi dòng đo riêng một thay đổi, ở
+thời điểm và app khác nhau, nên **không cộng dồn** thành một con số chung. Chưa có phép đo trọn vẹn
+so nhánh `ban-dung` hiện tại với bản gốc.
+
+| Đo cái gì | Bản gốc → bản này | Đo ở đâu |
+| --- | --- | --- |
+| Thời gian thay một từ, xoá 2 / 3 / 4 chữ | 14,5 / 21,8 / 31,2 ms → 12,4 / 16,3 / 20,5 ms | Konsole, Smooth, 8/8 mỗi mức, bản trước khi gom (khoảng cách phím xoá còn 2 ms) |
+| Khoảng cách giữa hai phím xoá (trung vị) | 5,2 ms → 0,1 ms | Konsole, ô soạn Edge, Firefox, Edge qua XWayland, 8/8 |
+| Chờ vô ích ở app không có surrounding text (trung vị) | 12,8 ms → 6,9 ms | Edge chạy qua XWayland, 16/16 |
+
+Nói cho đúng:
+
+- Từng lần chỉ chênh vài mili giây, dưới ngưỡng cảm nhận của một lần gõ.
+- App Wayland thuần không đi qua dòng thứ ba nên không đổi.
+- Khoảng cách phím xoá 0 ms là lựa chọn riêng của bản này. Máy đo chưa kiểm được trường hợp phím
+  xoá chen vào đúng lúc đang gõ nhanh; bằng chứng cho mức này là dùng tay hằng ngày.
+- Chế độ Smooth chờ app bằng hẹn giờ thay vì bắt cả fcitx5 đứng chờ. Ở bản gốc, khoảng 4% số phím
+  làm fcitx5 đứng từ 8 ms trở lên, lâu nhất 22 ms (đo 428 phím). Mức cải thiện của đúng thay đổi này
+  chưa đo riêng.
+- Trình duyệt dùng Super Smooth. Chủ máy gõ tay thấy nhanh hơn Smooth; chưa có số đo thời gian.
+
 ## Khác gì bản gốc
 
 ### Sửa lỗi gặp thật
 
-- **Super Smooth hết lặp chữ ở thanh địa chỉ Firefox và Edge** (gõ `tôi` ra `toôi`, kiểu issue
-  #190), mà vẫn giữ Super Smooth nguyên bản ở mọi ô khác. Chưa gửi lên bản gốc.
+- **Hết lặp chữ đầu ở thanh địa chỉ trình duyệt với chế độ uinput** (gõ `tôi` ra `toôi`, `ê` ra
+  `eê`, kiểu issue #190). Ở Chromium/Edge đã sửa triệt để, vì trình duyệt báo đúng phần tự điền. Ở
+  Firefox sửa theo hình dạng ô nhập, đo 7/7 lần có gợi ý ra đúng. Super Smooth vẫn giữ nguyên bản ở
+  mọi ô khác. Chưa gửi lên bản gốc.
 - **Bỏ khoảng chờ vô ích ở app không có surrounding text.** Edge chạy qua XWayland: độ trễ trung vị
   12,8 → 6,9 ms. Bản gốc từ chối (#490).
 - **Nhật ký máy chủ ghi ra đĩa từng dòng**, để phân biệt được nhật ký cũ với máy chủ đã chết. Bản
@@ -46,7 +74,6 @@ Cả hai nằm ở [PR #492](https://github.com/LotusInputMethod/fcitx5-lotus/pu
 ## Bản này KHÔNG sửa
 
 - Chế độ Surrounding Text vẫn lỗi, nhất là trên Firefox.
-- Lỗi `eê` ở thanh địa chỉ Chromium là lỗi của Chromium, không vá được từ phía bộ gõ.
 - Máy chủ bàn phím ảo chết giữa lúc thay chữ thì bàn phím chết theo.
 
 ## Cài
