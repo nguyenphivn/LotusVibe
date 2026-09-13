@@ -135,6 +135,63 @@ namespace fcitx {
         }
     }
 
+    namespace {
+        // Thanh địa chỉ Firefox không khai CapabilityFlag::Url, và báo cho bộ gõ là KHÔNG bôi đen
+        // phần tự điền dù trên màn hình có tô (đo 13/09/2026: cursor == anchor, 11-25 ký tự sau con
+        // trỏ). Nhận ra nó theo hình dạng: sau con trỏ có chữ, không xuống dòng, và toàn ký tự của
+        // địa chỉ web. Trình soạn thảo web (Lark) giữ ký tự vô hình sau con trỏ nên bị loại; bản
+        // chỉ cấm khoảng trắng từng bắn nhầm lá chắn trong Lark.
+        bool kyTuDiaChiWeb(uint32_t c) {
+            if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+                return true;
+            }
+            switch (c) {
+                case '-': case '.': case '_': case '~': case ':': case '/': case '?': case '#':
+                case '[': case ']': case '@': case '!': case '$': case '&': case '\'': case '(':
+                case ')': case '*': case '+': case ',': case ';': case '=': case '%':
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        bool chuSauGiongDuoiUrl(const SurroundingText& s) {
+            if (!s.isValid() || s.cursor() != s.anchor()) {
+                return false;
+            }
+            const unsigned tro = s.cursor();
+            unsigned       i   = 0;
+            size_t         sau = 0;
+            for (uint32_t c : fcitx::utf8::MakeUTF8CharRange(s.text())) {
+                if (c == U'\n') {
+                    return false;
+                }
+                if (i >= tro) {
+                    if (!kyTuDiaChiWeb(c)) {
+                        return false;
+                    }
+                    ++sau;
+                }
+                ++i;
+            }
+            return sau > 0;
+        }
+    } // namespace
+
+    namespace {
+        // Phần trước con trỏ đúng bằng chữ đang gõ, tức chữ nằm ngay đầu ô. Ở đó một phím xoá thừa
+        // rơi vào đầu ô và không xoá gì, nên lá chắn đoán sai cũng vô hại. Không dùng realtextLen:
+        // đo 13/09/2026 nó giữ độ dài của lần gõ trước sau khi xoá trắng thanh địa chỉ Firefox, làm
+        // isAutofillCertain trượt ở 5/6 lần lặp.
+        bool truocTroChiCoTuDangGo(const SurroundingText& s, const std::string& buff) {
+            if (!s.isValid() || buff.empty() || s.cursor() != utf8::length(buff)) {
+                return false;
+            }
+            const std::string& t = s.text();
+            return t.size() > buff.size() && t.compare(0, buff.size(), buff) == 0;
+        }
+    } // namespace
+
     bool LotusState::isAutofillCertain(const SurroundingText& s) {
         if (!s.isValid() || oldPreBuffer_.empty()) {
             return false;
@@ -728,12 +785,19 @@ namespace fcitx {
             !surrText.empty() && surrounding.cursor() == utf8::length(surrText);
         if (!isSurrText && realMode != LotusMode::Minecraft) {
             ++expected_backspaces_;
-            if (realMode != LotusMode::SuperSmooth) {
+            // Super Smooth bỏ lá chắn ở mọi ô để gõ nhanh, NHƯNG thanh địa chỉ trình duyệt vẫn cần
+            // nó (lỗi lặp chữ đầu, #190). Chromium khai cờ Url; Firefox không khai nên nhận theo
+            // hình dạng đuôi tự điền. Mọi ô khác giữ nguyên hành vi Super Smooth.
+            const bool laDiaChiFirefox = ic_->program() == "firefox" && chuSauGiongDuoiUrl(surrounding);
+            const bool xetKhien        = realMode != LotusMode::SuperSmooth || ic_->capabilityFlags().test(CapabilityFlag::Url) || laDiaChiFirefox;
+            if (xetKhien) {
                 // Enable Autofill detection for all frontends (Wayland/IBus).
                 // This fixes the "toôi" duplication bug in Chromium-based search bars.
                 // The isAutofillCertain function has been optimized to differentiate
                 // between browser autofill and AI ghost text.
-                if (isAutofillCertain(surrounding)) {
+                // Firefox: gợi ý tự điền hiện ngay sau chữ đầu tiên của ô; isAutofillCertain chạy trước
+                // để giữ nguyên cập nhật realtextLen của nó.
+                if (isAutofillCertain(surrounding) || (laDiaChiFirefox && truocTroChiCoTuDangGo(surrounding, oldPreBuffer_))) {
                     ++expected_backspaces_;
                 }
             }

@@ -14,7 +14,7 @@ cd fcitx5-lotus
 git checkout ban-dung
 ```
 
-`ban-dung` = `upstream/dev` + đúng **18 miếng vá**, không thiếu commit nào của tác giả.
+`ban-dung` = `upstream/dev` + đúng **19 miếng vá**, không thiếu commit nào của tác giả.
 
 Mấy nhánh khác là nhánh làm việc, **đừng lấy**:
 
@@ -76,9 +76,10 @@ busctl --user get-property org.kde.KWin \
 
 **Triệu chứng gốc vẫn chưa có lời giải chắc chắn.** Chủ máy báo gõ `Nguyễn Trãi` trong Lark ra
 `Nguyễn Traix`, chập chờn. Giả thuyết còn lại mạnh nhất: Lark chạy trong Firefox, mà lúc đó luật
-đặt `firefox=3` tức Super Smooth — chế độ uinput duy nhất bị tắt lá chắn chống nhân đôi chữ. Đó
-đúng là thứ sau này gây lặp chữ ở thanh địa chỉ Firefox và đã sửa bằng `firefox=1`. Nếu vậy thì
-touchpad vô can từ đầu. **Chưa kiểm chứng**, cần chủ máy gõ lại trong Lark rồi báo.
+đặt `firefox=3` tức Super Smooth — chế độ uinput duy nhất bị tắt lá chắn chống nhân đôi chữ. Nếu
+vậy thì touchpad vô can từ đầu. **Chưa kiểm chứng.** Lưu ý: từ vá lá chắn thanh địa chỉ ở nhóm E,
+Lark vẫn chạy Super Smooth KHÔNG có lá chắn (bộ lọc cố ý loại ô Lark), nên nếu `Traix` quay lại
+thì giả thuyết này đứng, còn nếu không quay lại thì nó yếu đi.
 
 ### `770f02e` — bỏ chờ retry vô ích ở app không có surrounding text
 
@@ -162,15 +163,59 @@ Sáu commit. Hai bài kiểm mới là lý do bản này chạy 11 bài thay vì
   chân nhau.
 - **`d5a6ab1`** hoà giải các nhánh đã gộp với bộ khung kiểm hiện tại của `dev`.
 
+## Nhóm E — sửa lỗi gặp thật, chưa gửi upstream
+
+### Super Smooth có lá chắn chống lặp chữ, nhưng CHỈ ở thanh địa chỉ trình duyệt
+
+**Triệu chứng:** ở chế độ Super Smooth, gõ tiếng Việt vào thanh địa chỉ bị lặp chữ đầu đúng kiểu
+issue #190 (gõ `tôi` ra `toôi`), trên cả Firefox lẫn Edge. Chế độ Smooth không lặp, nhưng chủ máy
+gõ thử thấy Super Smooth tốt hơn ở gần như mọi chỗ khác.
+
+**Nguyên nhân, trong mã gốc:** hai chế độ chỉ khác nhau đúng một chỗ. `performReplacement` bọc lá
+chắn `isAutofillCertain` bằng `realMode != LotusMode::SuperSmooth`, tức Super Smooth bỏ lá chắn ở
+mọi ô.
+
+**Vá:** Super Smooth vẫn bỏ lá chắn, trừ khi ô đang gõ là thanh địa chỉ trình duyệt:
+
+- **Edge/Chromium** tự khai `CapabilityFlag::Url` cho thanh địa chỉ, và báo đúng phần tự điền
+  đang bôi đen.
+- **Firefox** không khai cờ đó, và báo cho bộ gõ là KHÔNG bôi đen dù trên màn hình có tô. Nhận ra
+  theo hình dạng: sau con trỏ có chữ, không xuống dòng, và toàn ký tự của địa chỉ web. Ở đó lá chắn
+  bắn khi phép đoán gốc đồng ý, **hoặc** khi phần trước con trỏ đúng bằng chữ đang gõ (chữ đầu tiên
+  của ô). Nhánh thứ hai cần vì phép đoán gốc so với một độ dài tự đếm, mà độ dài đó giữ số của lần
+  gõ trước sau khi xoá trắng ô. Phím xoá thừa ở đầu ô không xoá gì nên đoán sai cũng vô hại.
+
+**Đo 13/09/2026** bằng dòng ghi tạm, chỉ số đếm, không lưu chữ, đã gỡ khỏi bản dùng:
+
+| Ô | Lá chắn được xét | Kết quả chủ máy gõ |
+| --- | --- | --- |
+| Thanh địa chỉ Edge | có, nhờ cờ Url; 6/6 lần có gợi ý thì bắn | hết lặp |
+| Thanh địa chỉ Firefox | có, nhờ hình dạng đuôi; 2/2 lần có gợi ý thì bắn | hết lặp |
+| Lark trong Firefox, ô web Edge, Alacritty | không, Super Smooth nguyên bản | ổn |
+
+**Bẫy đã gặp, đừng nới bộ lọc:** bản đầu chỉ cấm khoảng trắng sau con trỏ. Lark luôn giữ 3 ký tự
+vô hình sau con trỏ nên lọt qua, và đã bắn lá chắn nhầm một lần trong Lark. Bộ lọc theo tập ký tự
+địa chỉ web loại cả 19/19 lần thay chữ ở Lark.
+
+**Bài học đo:** bảng trên lúc đầu chỉ có 2 lần Firefox có gợi ý. Dùng thật thì còn lặp khoảng 27%
+(bộ đo tự đọc lại ô sau mỗi lần sửa dấu: 6/22 lần lặp, 5 trong số đó do độ dài tự đếm cũ). Sau khi
+thêm nhánh "chữ đầu tiên của ô": 7/7 lần có gợi ý ra đúng, 0 lặp, 0 mất chữ, chủ máy gõ thật báo
+hết lặp. Mẫu vẫn nhỏ.
+
+**Còn sót có thể:** nếu Firefox chưa kịp báo phần tự điền lúc bộ gõ quyết định thì không nhánh nào
+nhận ra. Lượt đo đầu gặp 1/22 lần, lượt sau không gặp.
+
+**Cần luật:** `firefox=3`, `microsoft-edge=3` (xem mục cấu hình bên dưới).
+
 ## Cấu hình nên đặt kèm
 
-Vá mã thôi chưa đủ, hai luật theo app dưới đây mới hết lỗi:
+Luật theo app đang dùng trên máy này:
 
-- **`firefox=1`** (Smooth), **không phải 3**. Chế độ 3 là Super Smooth, và đó là chế độ uinput
-  **duy nhất** bị tắt lá chắn chống nhân đôi chữ ở ô có tự-điền. Để 3 thì thanh địa chỉ Firefox
-  lặp chữ đúng kiểu issue #190. Hai chế độ chỉ khác nhau đúng chỗ lá chắn đó. Lark chạy trong
-  Firefox nên cũng theo luật này.
-- **`Alacritty=1`** vì cùng lý do.
+- **`firefox=3`** và **`microsoft-edge=3`** (Super Smooth). Chỉ đặt 3 được khi có vá ở nhóm E. Dùng
+  bản Lotus gốc thì đặt `firefox=1` (Smooth), vì Super Smooth gốc không có lá chắn chống lặp chữ ở
+  thanh địa chỉ. Lark chạy trong Firefox nên cũng theo luật này.
+- **`Alacritty=3`**. Lá chắn chỉ liên quan ô có tự điền, mà cửa sổ dòng lệnh không có tự điền,
+  nên Super Smooth không thiệt gì.
 
 ## Những gì bản này KHÔNG sửa
 
