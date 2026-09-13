@@ -14,7 +14,8 @@ cd fcitx5-lotus
 git checkout ban-dung
 ```
 
-`ban-dung` = `upstream/dev` + đúng **19 miếng vá**, không thiếu commit nào của tác giả.
+`ban-dung` = `upstream/dev` + đúng **19 miếng vá**, không thiếu commit nào của tác giả. Từ
+13/09/2026 đây cũng là **nhánh mặc định** của fork.
 
 Mấy nhánh khác là nhánh làm việc, **đừng lấy**:
 
@@ -315,6 +316,11 @@ Tác giả đẩy mã rất nhanh, khoảng 163 commit mỗi 30 ngày. Khi cần
 **Dựng nhánh MỚI từ `upstream/dev` rồi nhặt lại từng vá.** Đừng gộp chồng lên nhánh cũ. Gộp
 chồng làm bản mình tụt lại sau upstream mà không ai để ý, đúng như nhánh `tong-hop` cũ: nó hơn
 `dev` 27 commit nhưng lại THIẾU 1 commit của tác giả.
+
+**Trang đầu của fork là `.github/README.md`**, không phải `README.md`. GitHub ưu tiên hiện tệp trong
+`.github`, nhờ vậy `README.md` của tác giả giữ nguyên và không gây xung đột mỗi lần gom lại. Trang
+đầu chỉ tóm tắt mỗi vá một dòng. **Thêm hoặc bỏ vá thì sửa cả tệp này lẫn trang đầu, trong cùng
+commit.**
 
 Sau khi gom xong, phép kiểm bắt buộc là **so mã băm cây mã** với nhánh trước đó. Giống nhau thì
 việc gom đúng, khác một byte cũng là hỏng:
