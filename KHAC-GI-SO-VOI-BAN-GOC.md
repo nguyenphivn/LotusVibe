@@ -14,7 +14,7 @@ cd fcitx5-lotus
 git checkout ban-dung
 ```
 
-`ban-dung` = `upstream/dev` + đúng **19 miếng vá**, không thiếu commit nào của tác giả. Từ
+`ban-dung` = `upstream/dev` + đúng **20 miếng vá**, không thiếu commit nào của tác giả. Từ
 13/09/2026 đây cũng là **nhánh mặc định** của fork.
 
 Mấy nhánh khác là nhánh làm việc, **đừng lấy**:
@@ -109,10 +109,11 @@ bài:
 ```
 cmake -B build-test -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 cmake --build build-test -j8
-unshare -Urn ctest --test-dir build-test        # phải ra 11/11
+unshare -Urn ctest --test-dir build-test        # phải ra 12/12
 ```
 
-Bản gốc `dev` chạy 9 bài. Bản này 11, vì có thêm hai bài kiểm ở nhóm D bên dưới.
+Bản gốc `dev` chạy 9 bài. Bản này 12: thêm hai bài kiểm ở nhóm D, và một bài đi kèm vá icon ở
+nhóm E.
 
 ## Hiệu năng so với bản gốc (chế độ uinput)
 
@@ -252,7 +253,8 @@ Hai commit, gửi chung ở [PR #492](https://github.com/LotusInputMethod/fcitx5
 
 ## Nhóm D — bộ kiểm thêm vào
 
-Sáu commit. Hai bài kiểm mới là lý do bản này chạy 11 bài thay vì 9.
+Sáu commit. Hai bài kiểm mới ở đây, cộng bài kiểm của vá icon ở nhóm E, là lý do bản này chạy 12
+bài thay vì 9.
 
 - **`c612050`** bài kiểm bất biến trên chuỗi phím ngẫu nhiên.
 - **`b789d26`** đối chứng dương cho các bất biến P2 đến P5, tức chứng minh bài kiểm THẤY được
@@ -311,6 +313,39 @@ nhận ra. Lượt đo đầu gặp 1/22 lần, lượt sau không gặp.
 Chromium báo đúng phần tự điền đang bôi đen, nên ở Edge lá chắn đi theo cơ chế chắc chắn, không phải
 phép đoán. Chủ máy xác nhận ngày 13/09/2026. Chế độ Surrounding Text **không** được sửa: ở chế độ đó
 lỗi này vẫn là lỗi của Chromium (đã báo Chromium số 557316480), xem mục "không sửa".
+
+### Icon chữ V màu đen trên panel tối của KDE (issue #374)
+
+**Triệu chứng:** trên KDE Plasma, màu icon để `Auto`, chữ V ở khay hệ thống màu đen nằm trên panel
+màu đen, gần như không thấy. Gặp ngay với giao diện mặc định của Fedora 44.
+
+**Nguyên nhân, trong mã gốc:** `isDarkMode()` hỏi portal (`org.freedesktop.appearance
+color-scheme`). Trên KDE, portal trả lời theo màu cửa sổ ứng dụng (`kdeglobals`), còn panel do
+Plasma Style (`plasmarc`) tô. Giao diện mặc định Fedora đặt `ColorScheme=BreezeLight` nhưng Plasma
+Style là `breeze-dark`, ghi ở `~/.config/kdedefaults`. Portal trả 2 (sáng) nên Lotus chọn icon đen.
+
+**Vá:** tệp mới `src/lotus-plasma-theme.cpp`. Khi `XDG_CURRENT_DESKTOP` có `KDE`, Lotus đọc thẳng
+tệp cấu hình, không gọi tiến trình con:
+
+- Lấy tên Plasma Style theo thứ tự đè của KConfig: thư mục người dùng, rồi `kdedefaults`, rồi
+  `/etc/xdg`.
+- Giao diện có tệp `colors` riêng thì lấy màu nền cửa sổ trong đó. Không có (Breeze `default`) thì
+  theo bảng màu hệ thống.
+- Ngưỡng tối/sáng giống portal KDE: độ xám dưới 192 là tối. Đọc không ra thì rơi về cách cũ.
+
+**Đo 14/09/2026:**
+
+- Bài kiểm `plasma_panel_theme`, 15 trường hợp. Khai trước là bản rỗng phải đỏ đúng 12 bài (P1–P9,
+  S1, E1, E2): ra đúng 12. Mã thật 15/15 xanh, cả bộ 12/12.
+- Máy thật Fedora 44 KDE Wayland, chụp khay trước và sau khi cài: V đen thành V trắng.
+
+**Bẫy đo đã gặp:** `strings liblotus.so | grep desktoptheme` ra 0 dù mã đã vào, vì trình biên dịch
+nhét chuỗi ngắn thẳng vào lệnh máy. Tìm theo tên hàm bằng `nm -C` mới đúng (đối chứng: tệp kiểm
+thấy 2).
+
+**Chưa kiểm:** Kubuntu, Plasma Style của bên thứ ba, đổi giao diện khi Lotus đang chạy (icon đổi ở
+lần khay cập nhật kế tiếp, kết quả lưu tạm 5 giây). Chưa gửi upstream. Issue #374 đang mở, tác giả
+không dùng KDE và đã mời người dùng KDE gửi bản sửa.
 
 ## Cấu hình nên đặt kèm
 

@@ -7,7 +7,7 @@ Trang này chỉ ghi **những gì khác với bản gốc**. Hướng dẫn dù
 [README của bản gốc](https://github.com/nguyenphivn/fcitx5-lotus/blob/ban-dung/README.md) hoặc
 [trang chủ Lotus](https://lotusinputmethod.github.io/).
 
-- **Nhánh để dùng:** `ban-dung` (nhánh mặc định) = `dev` của bản gốc + 19 miếng vá.
+- **Nhánh để dùng:** `ban-dung` (nhánh mặc định) = `dev` của bản gốc + 20 miếng vá.
 - **Chi tiết từng vá, số đo, tác giả gốc trả lời ra sao, và hướng dẫn cài:**
   [KHAC-GI-SO-VOI-BAN-GOC.md](https://github.com/nguyenphivn/fcitx5-lotus/blob/ban-dung/KHAC-GI-SO-VOI-BAN-GOC.md)
 
@@ -67,6 +67,9 @@ Nói cho đúng:
   12,8 → 6,9 ms. Bản gốc từ chối (#490).
 - **Nhật ký máy chủ ghi ra đĩa từng dòng**, để phân biệt được nhật ký cũ với máy chủ đã chết. Bản
   gốc từ chối (#468).
+- **Chữ V hết màu đen trên panel tối của KDE** (issue #374, gặp ngay với giao diện mặc định Fedora
+  44). Lotus đọc màu của panel thay vì màu cửa sổ ứng dụng. Chụp trước và sau trên máy thật: V đen
+  thành V trắng. Chưa gửi lên bản gốc.
 
 ### Đang chờ tác giả gốc trả lời
 
@@ -86,8 +89,8 @@ Cả hai nằm ở [PR #492](https://github.com/LotusInputMethod/fcitx5-lotus/pu
 
 ### Kiểm thử
 
-- 11 bài kiểm thay vì 9: thêm kiểm bất biến trên chuỗi phím ngẫu nhiên, và tái hiện lỗi giữ phím
-  của issue #472.
+- 12 bài kiểm thay vì 9: thêm kiểm bất biến trên chuỗi phím ngẫu nhiên, kiểm màu panel KDE, và tái
+  hiện lỗi giữ phím của issue #472.
 
 ## Bản này KHÔNG sửa
 
