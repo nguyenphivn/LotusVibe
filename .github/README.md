@@ -69,7 +69,7 @@ Nói cho đúng:
   gốc từ chối (#468).
 - **Chữ V hết màu đen trên panel tối của KDE** (issue #374, gặp ngay với giao diện mặc định Fedora
   44). Lotus đọc màu của panel thay vì màu cửa sổ ứng dụng. Chụp trước và sau trên máy thật: V đen
-  thành V trắng. Chưa gửi lên bản gốc.
+  thành V trắng. Đã gửi lên bản gốc ở PR #497, đang chờ duyệt.
 
 ### Đang chờ tác giả gốc trả lời
 

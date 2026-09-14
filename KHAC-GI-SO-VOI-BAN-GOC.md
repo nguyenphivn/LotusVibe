@@ -344,8 +344,10 @@ nhét chuỗi ngắn thẳng vào lệnh máy. Tìm theo tên hàm bằng `nm -C
 thấy 2).
 
 **Chưa kiểm:** Kubuntu, Plasma Style của bên thứ ba, đổi giao diện khi Lotus đang chạy (icon đổi ở
-lần khay cập nhật kế tiếp, kết quả lưu tạm 5 giây). Chưa gửi upstream. Issue #374 đang mở, tác giả
-không dùng KDE và đã mời người dùng KDE gửi bản sửa.
+lần khay cập nhật kế tiếp, kết quả lưu tạm 5 giây).
+
+**Đã gửi upstream 14/09/2026:** giải thích cách sửa ở issue #374 (tác giả không dùng KDE, đã mời
+người dùng KDE gửi bản sửa), PR #497 vào `dev`, chỉ mang phần mã và bài kiểm.
 
 ## Cấu hình nên đặt kèm
 
