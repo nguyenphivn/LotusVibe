@@ -1,13 +1,14 @@
 # fcitx5-lotus — bản fork dùng hằng ngày
 
 Đây là bản fork của [fcitx5-lotus](https://github.com/LotusInputMethod/fcitx5-lotus), bộ gõ tiếng
-Việt cho fcitx5, chạy hằng ngày trên CachyOS + KDE Plasma Wayland.
+Việt cho fcitx5, chạy hằng ngày trên CachyOS + KDE Plasma Wayland và trên một iMac Ubuntu 24.04 +
+GNOME X11.
 
 Trang này chỉ ghi **những gì khác với bản gốc**. Hướng dẫn dùng bộ gõ nói chung xem
 [README của bản gốc](https://github.com/nguyenphivn/fcitx5-lotus/blob/ban-dung/README.md) hoặc
 [trang chủ Lotus](https://lotusinputmethod.github.io/).
 
-- **Nhánh để dùng:** `ban-dung` (nhánh mặc định) = `dev` của bản gốc + 20 miếng vá.
+- **Nhánh để dùng:** `ban-dung` (nhánh mặc định) = `dev` của bản gốc + 23 miếng vá.
 - **Chi tiết từng vá, số đo, tác giả gốc trả lời ra sao, và hướng dẫn cài:**
   [KHAC-GI-SO-VOI-BAN-GOC.md](https://github.com/nguyenphivn/fcitx5-lotus/blob/ban-dung/KHAC-GI-SO-VOI-BAN-GOC.md)
 
@@ -34,7 +35,7 @@ hằng ngày. **Chưa làm.**
 Cải thiện chính của bản này nằm ở **chế độ uinput** (Smooth, Super Smooth): thay chữ nhanh hơn và
 không lặp chữ. Chế độ Surrounding Text **không** được sửa.
 
-Mọi số dưới đây đo trên máy gốc (CachyOS, KDE Plasma Wayland). Mỗi dòng đo riêng một thay đổi, ở
+Mọi số trong bảng dưới đây đo trên máy gốc (CachyOS, KDE Plasma Wayland). Mỗi dòng đo riêng một thay đổi, ở
 thời điểm và app khác nhau, nên **không cộng dồn** thành một con số chung. Chưa có phép đo trọn vẹn
 so nhánh `ban-dung` hiện tại với bản gốc.
 
@@ -69,7 +70,16 @@ Nói cho đúng:
   gốc từ chối (#468).
 - **Chữ V hết màu đen trên panel tối của KDE** (issue #374, gặp ngay với giao diện mặc định Fedora
   44). Lotus đọc màu của panel thay vì màu cửa sổ ứng dụng. Chụp trước và sau trên máy thật: V đen
-  thành V trắng. Đã gửi lên bản gốc ở PR #497, đang chờ duyệt.
+  thành V trắng. Mã sửa đã vào bản gốc (PR #497); bản này chỉ giữ thêm bài kiểm.
+- **Gõ đúng trong LibreOffice với chế độ uinput** (issue #162: `chao` + `f` ra `chaà`). Nguyên nhân
+  không phải máy chậm: LibreOffice xử lý phím xoá theo kiểu hẹn sau, còn chữ mới chèn ngay nên vượt
+  mặt. Bản này xoá bằng surrounding text riêng cho LibreOffice. Đo trên Writer: 30–36/60 từ sai →
+  0/60; Calc, Impress 0/60. Đã báo ở #162, chưa gửi mã.
+- **Hết đứng màn hình 2–3 giây khi gõ trên GNOME X11.** Máy chủ gửi phím xoá qua đúng bàn phím người
+  dùng đang gõ thay vì bàn phím ảo, nên X11 không phải nạp lại bảng phím. Lần đứng lâu nhất 2,0–2,7 s →
+  0,2 s. Kèm một vá để máy chủ không bỏ sót sự kiện bàn phím. Đã báo ở #506, #507, chưa gửi mã.
+- **Chờ 4 ms mỗi phím xoá thay vì 2** ở Smooth và Super Smooth. Máy tải nặng: 2 ms đúng 39–46/60
+  câu, 4 ms đúng 58–60/60. Máy rảnh không khác.
 
 ### Đang chờ tác giả gốc trả lời
 
@@ -80,7 +90,6 @@ Cả hai nằm ở [PR #492](https://github.com/LotusInputMethod/fcitx5-lotus/pu
 
 ### Dọn dẹp và hạ tầng
 
-- Bỏ phụ thuộc X11 không dùng tới. Tệp dựng ra giống hệt, máy có X11 vẫn chạy bình thường.
 - Siết dịch vụ systemd của máy chủ: `systemd-analyze security` từ 7.0 xuống 2.0.
 - Gỡ công tắc `FixUinputWithAck` vốn mặc định tắt.
 - Đường dẫn máy chủ lấy từ CMake thay vì viết cứng; thêm biến môi trường `LOTUS_SERVER_PATH`,
@@ -94,7 +103,7 @@ Cả hai nằm ở [PR #492](https://github.com/LotusInputMethod/fcitx5-lotus/pu
 
 ## Bản này KHÔNG sửa
 
-- Chế độ Surrounding Text vẫn lỗi, nhất là trên Firefox.
+- Chế độ Surrounding Text vẫn lỗi, nhất là trên Firefox và LibreOffice Writer (60/60 từ sai).
 - Máy chủ bàn phím ảo chết giữa lúc thay chữ thì bàn phím chết theo.
 
 ## Cài

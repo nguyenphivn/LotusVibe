@@ -1,7 +1,8 @@
 # Bản này khác gì so với Lotus gốc
 
 Đây là bản fork của [fcitx5-lotus](https://github.com/LotusInputMethod/fcitx5-lotus), dùng hằng
-ngày trên máy CachyOS + KDE Plasma Wayland. Tệp này ghi lại **từng miếng vá**: vá gì, vì sao, đã
+ngày trên hai máy: CachyOS + KDE Plasma Wayland, và một iMac chạy Ubuntu 24.04 + GNOME X11 (máy tính
+tiền kiêm máy chạy CI). Tệp này ghi lại **từng miếng vá**: vá gì, vì sao, đã
 gửi ngược lên chưa, và tác giả trả lời ra sao.
 
 ## Lấy bản nào
@@ -14,7 +15,7 @@ cd fcitx5-lotus
 git checkout ban-dung
 ```
 
-`ban-dung` = `upstream/dev` + đúng **20 miếng vá**, không thiếu commit nào của tác giả. Từ
+`ban-dung` = `upstream/dev` + đúng **23 miếng vá**, không thiếu commit nào của tác giả. Từ
 13/09/2026 đây cũng là **nhánh mặc định** của fork.
 
 Mấy nhánh khác là nhánh làm việc, **đừng lấy**:
@@ -112,8 +113,8 @@ cmake --build build-test -j8
 unshare -Urn ctest --test-dir build-test        # phải ra 12/12
 ```
 
-Bản gốc `dev` chạy 9 bài. Bản này 12: thêm hai bài kiểm ở nhóm D, và một bài đi kèm vá icon ở
-nhóm E.
+Bản gốc `dev` chạy 9 bài. Bản này 12: thêm hai bài kiểm ở nhóm D, và bài kiểm của vá icon ở
+nhóm E (mã vá đã vào bản gốc, bài kiểm thì chưa).
 
 ## Hiệu năng so với bản gốc (chế độ uinput)
 
@@ -132,7 +133,7 @@ phép đo trọn vẹn** so nhánh `ban-dung` hiện tại (khoảng cách 0 ms)
 **Lời khai kèm:** từng lần chênh vài mili giây, dưới ngưỡng cảm nhận. Mức 0 ms là lựa chọn riêng của
 máy này (đề xuất cho bản gốc là 2 ms); bàn phím ảo trong bộ đo gõ khoảng 25 ms một phím nên chưa bao
 giờ chạm trường hợp phím xoá chen vào lúc người gõ nhanh. Thay `sleep_for` bằng hẹn giờ ở chế độ
-Smooth (`edcc370`) chưa đo riêng; số nền của bản gốc là 4% phím làm fcitx5 đứng ≥ 8 ms, lâu nhất
+Smooth (`f5d97db`) chưa đo riêng; số nền của bản gốc là 4% phím làm fcitx5 đứng ≥ 8 ms, lâu nhất
 22,2 ms, trên 428 phím (B33). Super Smooth và Smooth chưa từng đo khác nhau về thời gian (B43v);
 "Super Smooth gõ tốt hơn" là chủ máy gõ tay.
 
@@ -141,7 +142,7 @@ Smooth (`edcc370`) chưa đo riêng; số nền của bản gốc là 4% phím l
 Hai miếng này tác giả đã đóng issue mà không sửa mã, và cả hai vẫn đứng vững. Mục thứ ba bên
 dưới là một miếng vá **đã bị rút lại** vì mình báo sai — giữ lại để khỏi ai làm lại.
 
-### ĐÃ RÚT LẠI — `f9ccb50` máy chủ đừng tự bật chạm-để-bấm (issue #494)
+### ĐÃ RÚT LẠI — `769caad` máy chủ đừng tự bật chạm-để-bấm (issue #494)
 
 **Miếng vá này đã bị gỡ khỏi `ban-dung`.** Giữ mục này lại làm bài học, đừng làm lại.
 
@@ -182,7 +183,7 @@ vậy thì touchpad vô can từ đầu. **Chưa kiểm chứng.** Lưu ý: từ
 Lark vẫn chạy Super Smooth KHÔNG có lá chắn (bộ lọc cố ý loại ô Lark), nên nếu `Traix` quay lại
 thì giả thuyết này đứng, còn nếu không quay lại thì nó yếu đi.
 
-### `770f02e` — bỏ chờ retry vô ích ở app không có surrounding text
+### `7f3ff67` — bỏ chờ retry vô ích ở app không có surrounding text
 
 **Nguyên nhân:** đường uinput chờ thêm 6 ms để app gửi lại surrounding text, ngay cả với app đã
 tự khai là không có. Cái chờ đó không thể thành công.
@@ -197,7 +198,7 @@ kiểu NOT_PLANNED.
 thuần. App Wayland luôn khai có surrounding text nên không bao giờ đi vào nhánh này. Phải đo
 trên app qua XWayland mới thấy. Đừng lặp lại lỗi đó.
 
-### `9c82072` — nhật ký xả đĩa mỗi dòng, không chỉ khi có cảnh báo
+### `5fa19be` — nhật ký xả đĩa mỗi dòng, không chỉ khi có cảnh báo
 
 **Nguyên nhân:** bản gốc chỉ xả đĩa khi mức log từ WARN trở lên. Mọi dòng quan trọng lúc khởi
 động đều là mức INFO, nên nhật ký đứng yên trong khi máy chủ vẫn chạy bình thường. Người đọc
@@ -213,9 +214,9 @@ kiểu NOT_PLANNED.
 Hai commit, gửi chung ở [PR #492](https://github.com/LotusInputMethod/fcitx5-lotus/pull/492)
 (bản nháp). Liên quan hai issue còn mở, #487 và #488.
 
-- **`9252326`** — chờ SỰ KIỆN surrounding text thay vì ngủ theo một hằng số đoán trước.
+- **`208d1b3`** — chờ SỰ KIỆN surrounding text thay vì ngủ theo một hằng số đoán trước.
   **Mặc định TẮT**, phải bật trong cấu hình mới có tác dụng.
-- **`edcc370`** — ở nhánh dự phòng của chế độ Smooth, chờ app bằng hẹn giờ thay vì `sleep_for`.
+- **`f5d97db`** — ở nhánh dự phòng của chế độ Smooth, chờ app bằng hẹn giờ thay vì `sleep_for`.
   `sleep_for` chặn vòng lặp sự kiện của cả fcitx5, không riêng Lotus.
 
 **Khe hở đã khai thẳng trong PR, đừng rút lại:** nếu người dùng đổi cửa sổ trong vòng 50 ms thì
@@ -223,29 +224,28 @@ Hai commit, gửi chung ở [PR #492](https://github.com/LotusInputMethod/fcitx5
 
 ## Nhóm C — dọn dẹp và hạ tầng, chưa gửi upstream
 
-- **`48e3122` bỏ phụ thuộc X11 không dùng.** Không có dòng mã nào trong `src/`, `server/`,
-  `test/` gọi X11. Đo `ldd`: 0 thư viện X11 cả trước lẫn sau, tệp sinh ra giống hệt. Cái đổi là
-  máy Wayland thuần không còn phải cài gói phát triển X11 để dựng thứ chẳng đụng tới X11.
-  Đối chứng dương cho phép đo: `ldd` trên mô-đun xcb của fcitx5 ra 8 thư viện.
-- **`a87bc7b` siết cứng dịch vụ systemd.** `systemd-analyze security` từ 7.0 MEDIUM xuống 2.0
+Vá bỏ phụ thuộc X11 từng nằm ở đây đã vào bản gốc, nên không còn trong `ban-dung`.
+
+
+- **`5563540` siết cứng dịch vụ systemd.** `systemd-analyze security` từ 7.0 MEDIUM xuống 2.0
   OK, và đã cài chạy thật để chắc dịch vụ không hỏng. Hai chỉ thị cố ý KHÔNG bật vì cả hai đều
   làm hỏng dịch vụ: `PrivateNetwork` (udev gửi sự kiện qua netlink, netlink theo từng không gian
   mạng) và `ProtectProc` (cổng xác thực phải đọc `/proc/<pid>/exe` của tiến trình thuộc người
   dùng khác). Lưu ý `PrivateTmp` làm nhật ký chuyển vào `/tmp/systemd-private-*/`, đọc phải có
   quyền root và đường cũ ngừng cập nhật.
-- **`0355cfb` gỡ `FixUinputWithAck`, cờ Chromium và tệp `src/ack-apps.h`.** Công tắc này vốn mặc
+- **`4a54d17` gỡ `FixUinputWithAck`, cờ Chromium và tệp `src/ack-apps.h`.** Công tắc này vốn mặc
   định TẮT nên gỡ đi hành vi không đổi. Đã soi cả 5 chỗ dùng để chắc mỗi chỗ đặc biệt hoá đúng
   cho nhánh tắt.
-- **`86ea551` lấy đường dẫn máy chủ từ CMake thay vì viết cứng `/usr/bin`.**
+- **`44433d6` lấy đường dẫn máy chủ từ CMake thay vì viết cứng `/usr/bin`.**
   ⚠️ **Gửi lẻ commit này lên upstream sẽ làm gói Nix GÃY**, vì Nix dùng
   `substituteInPlace --replace-fail` trên đúng chuỗi literal đó. Phải gửi kèm bản sửa tệp Nix
   trong cùng một PR.
-- **`220b57c` biến môi trường `LOTUS_SERVER_PATH`** để chỉ định máy chủ mong đợi. Thiếu biến này
+- **`94dd9f1` biến môi trường `LOTUS_SERVER_PATH`** để chỉ định máy chủ mong đợi. Thiếu biến này
   thì mô-đun từ chối socket chuột, và tính năng bấm chuột ngắt từ chết âm thầm.
-- **`6925601` máy chủ hiểu `LOTUS_SOCKET_NAMESPACE`** giống mô-đun. Nhờ vậy chạy được một cặp
+- **`07cca04` máy chủ hiểu `LOTUS_SOCKET_NAMESPACE`** giống mô-đun. Nhờ vậy chạy được một cặp
   mô-đun + máy chủ riêng bên cạnh bản đóng gói sẵn, không giẫm chân nhau.
-- **`f14c0da` núm vặn `LOTUS_BACKSPACE_GAP_MS`** để đo nhịp gửi phím xoá.
-- **`d2a46e6` khoảng cách phím xoá mặc định 0 ms thay vì 5.** Đo `khoang_cach_xoa.py macdinh`:
+- **`7795460` núm vặn `LOTUS_BACKSPACE_GAP_MS`** để đo nhịp gửi phím xoá.
+- **`42d7529` khoảng cách phím xoá mặc định 0 ms thay vì 5.** Đo `khoang_cach_xoa.py macdinh`:
   0,10 ms, 8/8 trên bốn đích. **Đây là lựa chọn riêng của máy này, không phải đề xuất cho
   upstream** — mức đề xuất cho upstream là 2 ms, vì mức 0 bỏ hẳn yêu cầu khe im lặng. Dấu hiệu
   DUY NHẤT để quay lại mức 2 là **sót chữ hoặc thừa chữ khi gõ nhanh**, không phải cảm giác
@@ -253,19 +253,19 @@ Hai commit, gửi chung ở [PR #492](https://github.com/LotusInputMethod/fcitx5
 
 ## Nhóm D — bộ kiểm thêm vào
 
-Sáu commit. Hai bài kiểm mới ở đây, cộng bài kiểm của vá icon ở nhóm E, là lý do bản này chạy 12
+Sáu commit. Hai bài kiểm mới ở đây, cộng bài kiểm của vá icon ở nhóm E (`44c02e4`), là lý do bản này chạy 12
 bài thay vì 9.
 
-- **`c612050`** bài kiểm bất biến trên chuỗi phím ngẫu nhiên.
-- **`b789d26`** đối chứng dương cho các bất biến P2 đến P5, tức chứng minh bài kiểm THẤY được
+- **`1ed7339`** bài kiểm bất biến trên chuỗi phím ngẫu nhiên.
+- **`581fa75`** đối chứng dương cho các bất biến P2 đến P5, tức chứng minh bài kiểm THẤY được
   lỗi khi lỗi có mặt, chứ không phải xanh vì nó không kiểm gì.
-- **`a4c9759`** tái hiện vòng lặp giữ phím của issue #472.
-- **`971c5fd`** mô hình đúng phím thô mà cửa sổ nhận được ở chế độ Smooth.
-- **`a8b4b09`** tách socket riêng cho `smooth_buffered_key_replay` để hai bài kiểm không giẫm
+- **`098e89f`** tái hiện vòng lặp giữ phím của issue #472.
+- **`585b529`** mô hình đúng phím thô mà cửa sổ nhận được ở chế độ Smooth.
+- **`d4082ee`** tách socket riêng cho `smooth_buffered_key_replay` để hai bài kiểm không giẫm
   chân nhau.
-- **`d5a6ab1`** hoà giải các nhánh đã gộp với bộ khung kiểm hiện tại của `dev`.
+- **`028ae25`** hoà giải các nhánh đã gộp với bộ khung kiểm hiện tại của `dev`.
 
-## Nhóm E — sửa lỗi gặp thật, chưa gửi upstream
+## Nhóm E — sửa lỗi gặp thật, chưa gửi mã lên upstream
 
 ### Super Smooth có lá chắn chống lặp chữ, nhưng CHỈ ở thanh địa chỉ trình duyệt
 
@@ -346,8 +346,79 @@ thấy 2).
 **Chưa kiểm:** Kubuntu, Plasma Style của bên thứ ba, đổi giao diện khi Lotus đang chạy (icon đổi ở
 lần khay cập nhật kế tiếp, kết quả lưu tạm 5 giây).
 
-**Đã gửi upstream 14/09/2026:** giải thích cách sửa ở issue #374 (tác giả không dùng KDE, đã mời
-người dùng KDE gửi bản sửa), PR #497 vào `dev`, chỉ mang phần mã và bài kiểm.
+**Đã vào bản gốc:** PR #497 được gộp vào `dev` (commit gộp `79d5706`). Khi gom lại 16/09/2026, phần
+mã lấy nguyên của bản gốc; bản này chỉ còn giữ bài kiểm `plasma_panel_theme` (`44c02e4`), vì bản gốc
+nhận mã mà không mang bài kiểm.
+
+### LibreOffice: chế độ uinput xoá bằng surrounding text thay cho phím xoá (`a1dd658`)
+
+**Triệu chứng:** gõ Telex trong LibreOffice Writer ở Smooth hay Super Smooth, chữ thay từ 2 ký tự
+trở lên ra sai: `chao` + `f` thành `chaà`, `trương` + `f` thành `trươờn`. Thay 1 ký tự thì luôn đúng,
+nên ai bỏ dấu sớm ít gặp. Đây là issue #162 của bản gốc, mở từ tháng 3/2026; tác giả cho là do máy
+chậm.
+
+**Nguyên nhân, trong mã LibreOffice:** Writer gán Backspace thành phím tắt `.uno:SwBackspace`, và mọi
+phím tắt chạy **hẹn sau** (`svtools/source/misc/acceleratorexecute.cxx:223`,
+`AsyncAccelExec::execAsync()`; master vẫn vậy). Chữ commit thì chèn ngay. Nên chữ mới vượt mặt những
+phím xoá còn trong hàng, không phải do chậm.
+
+**Đã loại bằng số đo:** Lotus gửi đủ phím xoá và commit tới sau 19 ms (dbus-monitor); bật
+`FCITX_ENABLE_SYNC_MODE` vẫn sai 9–27/60; dùng `forwardKey` vẫn sai 21–22/60; chờ lâu hơn không cứu.
+
+**Vá:** khi chương trình là `soffice` (Writer, Calc, Impress) và app khai có surrounding text, xoá bằng
+`deleteSurroundingText`. Writer xoá ngay trên văn bản thật, tính từ con trỏ (`SwEditWin::
+DeleteSurroundingText`). Chỉ dùng để xoá, không dựng lại trạng thái từ surrounding text, nên không dính
+lỗi thiếu dấu cách của chế độ Surrounding Text. App khác giữ nguyên.
+
+**Đo 16/09/2026** trên iMac Ubuntu 24.04 GNOME X11, LibreOffice 24.2.7, bàn phím ảo gõ giống người vào
+đúng thiết bị bàn phím, 60 từ mỗi lượt, đếm từ sai. Bộ đo: `probes/x11/writer_tay.py` ở workbench.
+
+| Ô | Trước | Sau |
+| --- | --- | --- |
+| Writer cuối câu, Smooth, 150 / 350 ms mỗi phím | 30 / 36 sai | 0 / 0 |
+| Writer cuối câu, Super Smooth, 150 / 350 ms | 34 / 36 sai | 0 / 0 |
+| Writer, 70 ms, cả hai chế độ; giữa câu; gõ đè phím | chưa đo | 0; 0; 0 |
+| Calc, Impress, 150 ms | chưa đo | 0; 0 |
+
+Chủ máy gõ tay trước khi vá: 2/20 từ sai. Sau vá chủ máy gõ thử thấy được.
+
+**Bẫy đo đã gặp:** luật theo app (`soffice=3`) đè lên chế độ đặt qua D-Bus, nên mấy lượt tưởng là
+Preedit/Slow thật ra chạy Smooth. Bộ đo mới sửa thẳng luật rồi đọc lại. Bộ đo đầu (đọc lại bằng AT-SPI,
+đoạn văn dài) cũng thổi phồng lỗi so với gõ tay.
+
+**Upstream:** bình luận vào issue #162 kèm nguyên nhân và số đo, chưa gửi PR.
+
+### Máy chủ gửi phím xoá qua đúng bàn phím người dùng đang gõ (`c4dc98d`, issue #506)
+
+**Triệu chứng:** trên GNOME X11, gõ tiếng Việt làm cửa sổ GTK3 đứng 2–3 giây.
+
+**Nguyên nhân:** mỗi lần phím đổi qua lại giữa hai thiết bị (bàn phím thật, rồi bàn phím ảo của Lotus
+gửi phím xoá), X11 nạp lại bảng phím cho mọi app; gnome-shell mất khoảng 300 ms cho việc đó và ngừng
+xác nhận khung hình. Tái hiện không cần Lotus: hai bàn phím ảo xen kẽ mỗi phím làm cửa sổ đứng 3,2 s,
+cùng chuỗi phím từ một thiết bị 0,13 s.
+
+**Vá:** máy chủ nhớ bàn phím vừa gõ (qua libinput) và ghi phím xoá thẳng vào `/dev/input/eventN` của
+nó. Ghi lỗi (rút bàn phím, thiếu quyền) thì quay về bàn phím ảo; `LOTUS_BACKSPACE_VIA_DEVICE=0` tắt
+hẳn. Không cần thêm quyền: dịch vụ vốn chạy nhóm `input`.
+
+**Đo:** câu 90 phím, 8 phím/giây: lần đứng lâu nhất 2048–2668 ms → 201 ms, CPU gnome-shell mỗi câu
+1,31 → 0,95 s. Chủ máy dùng bàn phím không dây chuyển qua lại giữa adapter và bluetooth vẫn gõ đúng.
+Chưa đo trên GNOME Wayland.
+
+### Máy chủ xử lý hết hàng sự kiện libinput mỗi vòng (`02b68d0`, issue #507)
+
+**Nguyên nhân:** `libinput_dispatch()` chạy mọi vòng và rút cạn sự kiện vào hàng riêng, nhưng vòng rút
+hàng chỉ chạy khi `poll()` báo có dữ liệu. Lúc đang gửi phím xoá, `poll()` hết giờ chờ mà không báo gì,
+nên sự kiện nằm đó tới lần có phím kế tiếp. Vá trên (`c4dc98d`) cần sự kiện phím tới kịp nên mới lộ ra;
+với tính năng bấm chuột ngắt từ thì cú bấm bị xử lý trễ.
+
+**Vá:** rút hàng vô điều kiện ngay sau `libinput_dispatch()`.
+
+### Chờ 4 ms mỗi phím xoá ở Smooth và Super Smooth, thay vì 2 (`ae9d213`)
+
+**Đo trên gnome-terminal X11, 60 câu mỗi mức:** máy rảnh thì 2 ms và 4 ms đều đúng hết. Máy tải nặng
+(6 lõi bận ở `nice 15`, load khoảng 10): 2 ms đúng 39–46/60, 4 ms đúng 58–60/60, 8 ms 60/60. Máy tính
+tiền kiêm chạy CI nên tải nặng là chuyện có thật. Đã ghi trong issue #506.
 
 ## Cấu hình nên đặt kèm
 
@@ -365,6 +436,7 @@ Luật theo app đang dùng trên máy này:
   thanh địa chỉ. Lark chạy trong Firefox nên cũng theo luật này.
 - **`Alacritty=3`**. Lá chắn chỉ liên quan ô có tự điền, mà cửa sổ dòng lệnh không có tự điền,
   nên Super Smooth không thiệt gì.
+- **`soffice=3`** trên máy iMac. Vá LibreOffice ở nhóm E chạy được cả Smooth lẫn Super Smooth.
 
 ## Những gì bản này KHÔNG sửa
 
@@ -372,7 +444,9 @@ Nói rõ để khỏi mất công thử lại:
 
 - **Chế độ Surrounding Text vẫn lỗi.** Cơ chế surrounding text vốn không đáng tin: Firefox đẩy
   văn bản xung quanh trễ 58 đến 184 ms. Đã thử hướng "tin vào bộ đệm" và bị hồi quy ở ô soạn
-  thảo giàu, đã rút lại. Chế độ 4 hỏng trên Firefox cũng thuộc nhóm này.
+  thảo giàu, đã rút lại. Chế độ 4 hỏng trên Firefox cũng thuộc nhóm này. Trên LibreOffice Writer chế
+  độ này sai 60/60 từ (đo 16/09/2026), do LibreOffice báo thiếu dấu cách như tác giả đã nói ở #162;
+  vá LibreOffice ở nhóm E chỉ áp cho chế độ uinput.
 - **Máy chủ uinput chết giữa lúc thay chữ làm bàn phím chết theo.** Đã tái hiện được, bộ đo nằm
   ở `probes/vong_go/may_chu_chet_giua_chung.py` trong repo workbench. Chưa vá, đang trong hàng
   đợi gửi issue.
@@ -398,8 +472,16 @@ git rev-parse ban-dung^{tree}
 git rev-parse <nhánh cũ>^{tree}
 ```
 
-Lần gom này: 27 commit rút còn 19, bỏ 4 cặp làm-rồi-rút-lại, cây mã trùng khít
+Lần gom 13/09/2026: 27 commit rút còn 19, bỏ 4 cặp làm-rồi-rút-lại, cây mã trùng khít
 `ca93438c9247d503736bf4ce002d2d799fd252a9`, bộ kiểm 11/11.
+
+Lần gom 16/09/2026, nền `79d5706`: vá bỏ X11 và mã vá icon đã vào bản gốc nên rơi ra; thêm 4 vá mới
+(LibreOffice, gửi phím xoá qua bàn phím thật, rút hàng libinput, chờ 4 ms). Hai chỗ xung đột: dòng
+`#include` ở `lotus-engine.cpp` (giữ `lotus-plasma-theme.h`, bỏ `ack-apps.h`) và vá icon (lấy mã của
+bản gốc, giữ bài kiểm). Bài kiểm icon phải sửa theo hàm bản gốc đổi sang nhận `std::string`. Mã của bản
+dựng mới khớp 0 dòng khác với mã máy chủ đang cài và mô-đun đã đo trên iMac. Bộ kiểm 12/12.
+
+Mã băm commit trong tệp này đổi theo mỗi lần gom; tìm theo tiêu đề commit nếu không khớp.
 
 **Không đổi tên bản fork.** Chữ `lotus` nằm 1592 chỗ ở 95 tệp, và 4 tệp tác giả sửa nhiều nhất
 chính là 4 tệp việc đổi tên phải cày nát, nên đổi tên là tự chuốc xung đột mỗi lần cập nhật.
