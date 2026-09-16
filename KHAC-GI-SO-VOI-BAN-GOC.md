@@ -15,7 +15,7 @@ cd fcitx5-lotus
 git checkout ban-dung
 ```
 
-`ban-dung` = `upstream/dev` + đúng **23 miếng vá**, không thiếu commit nào của tác giả. Từ
+`ban-dung` = `upstream/dev` + đúng **24 miếng vá**, không thiếu commit nào của tác giả. Từ
 13/09/2026 đây cũng là **nhánh mặc định** của fork.
 
 Mấy nhánh khác là nhánh làm việc, **đừng lấy**:
@@ -110,11 +110,11 @@ bài:
 ```
 cmake -B build-test -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 cmake --build build-test -j8
-unshare -Urn ctest --test-dir build-test        # phải ra 12/12
+unshare -Urn ctest --test-dir build-test        # phải ra 13/13
 ```
 
-Bản gốc `dev` chạy 9 bài. Bản này 12: thêm hai bài kiểm ở nhóm D, và bài kiểm của vá icon ở
-nhóm E (mã vá đã vào bản gốc, bài kiểm thì chưa).
+Bản gốc `dev` chạy 9 bài. Bản này 13: thêm hai bài kiểm ở nhóm D, bài kiểm của vá icon KDE ở
+nhóm E (mã vá đã vào bản gốc, bài kiểm thì chưa), và bài kiểm của vá icon GNOME.
 
 ## Hiệu năng so với bản gốc (chế độ uinput)
 
@@ -253,8 +253,8 @@ Vá bỏ phụ thuộc X11 từng nằm ở đây đã vào bản gốc, nên kh
 
 ## Nhóm D — bộ kiểm thêm vào
 
-Sáu commit. Hai bài kiểm mới ở đây, cộng bài kiểm của vá icon ở nhóm E (`44c02e4`), là lý do bản này chạy 12
-bài thay vì 9.
+Sáu commit. Hai bài kiểm mới ở đây, cộng hai bài kiểm của vá icon KDE và GNOME ở nhóm E, là lý do bản
+này chạy 13 bài thay vì 9.
 
 - **`1ed7339`** bài kiểm bất biến trên chuỗi phím ngẫu nhiên.
 - **`581fa75`** đối chứng dương cho các bất biến P2 đến P5, tức chứng minh bài kiểm THẤY được
@@ -419,6 +419,41 @@ với tính năng bấm chuột ngắt từ thì cú bấm bị xử lý trễ.
 **Đo trên gnome-terminal X11, 60 câu mỗi mức:** máy rảnh thì 2 ms và 4 ms đều đúng hết. Máy tải nặng
 (6 lõi bận ở `nice 15`, load khoảng 10): 2 ms đúng 39–46/60, 4 ms đúng 58–60/60, 8 ms 60/60. Máy tính
 tiền kiêm chạy CI nên tải nặng là chuyện có thật. Đã ghi trong issue #506.
+
+### Icon chữ V màu đen trên thanh trên cùng của GNOME
+
+**Triệu chứng:** iMac Ubuntu 24.04, GNOME 46 X11, màu icon để `Auto`: chữ V trên thanh trên cùng màu
+đen, gần như không thấy. Cùng họ với lỗi KDE ở trên.
+
+**Nguyên nhân:** vá KDE chỉ chạy khi desktop là KDE. Trên GNOME, Lotus vẫn hỏi portal, mà portal trả
+lời theo giao diện ứng dụng (`color-scheme`, máy này là `default` = sáng). Thanh trên cùng thì do theme
+của GNOME Shell tô: Yaru của Ubuntu tô `#131313` kể cả khi giao diện sáng; WhiteSur (máy này, qua tiện
+ích User Themes) tô nền gần trong suốt và chữ trắng ở cả bản Dark lẫn Light.
+
+**Vá:** tệp mới `src/lotus-gnome-theme.cpp`. Khi `XDG_CURRENT_DESKTOP` có `GNOME` (trừ Budgie, Pantheon,
+GNOME Flashback và mấy desktop tự vẽ thanh riêng), Lotus tìm tệp CSS của shell giống cách GNOME làm:
+
+- Tiện ích User Themes đang bật và có tên theme: tìm `~/.themes`, `$XDG_DATA_HOME/themes`, rồi thư mục
+  hệ thống, đúng thứ tự trong `util.js` của tiện ích.
+- Không có: lấy `stylesheetName` trong `gnome-shell/modes/$GNOME_SHELL_SESSION_MODE.json` (Ubuntu:
+  `Yaru/gnome-shell.css`).
+- Đọc luật `#panel`: có màu chữ thì theo màu chữ (chữ sáng là thanh tối), vì thanh trong suốt lấy nền
+  từ hình nền nên chỉ màu chữ mới nói được ý của theme. Không có thì theo màu nền nếu nền đục.
+- GNOME gốc (theme Adwaita đóng gói trong GResource) không đọc được thì giữ cách cũ.
+
+Đọc `gsettings` bằng tiến trình con như đoạn mã cũ vẫn làm; kết quả vẫn lưu tạm 5 giây.
+
+**Đo 16/09/2026:**
+
+- Bài kiểm `gnome_panel_theme`, 20 trường hợp, CSS chép từ WhiteSur và Yaru thật. Khai trước là bản
+  rỗng phải đỏ đúng 12: ra đúng 12. Mã thật 20/20, cả bộ 13/13.
+- Chạy phần nhận màu với môi trường thật của fcitx5 trên iMac: tìm ra
+  `~/.themes/WhiteSur-Dark/gnome-shell/gnome-shell.css`, trả lời thanh tối (trước vá: portal trả 0 = sáng).
+
+**Chưa kiểm:** nhìn icon trên màn hình sau vá (lúc dựng màn hình đang khoá, GNOME tắt khay khi khoá);
+GNOME gốc Fedora/Arch; GNOME Wayland; tiện ích làm thanh trong suốt khác; `clang-format` (máy không có).
+
+**Upstream:** chưa gửi.
 
 ## Cấu hình nên đặt kèm
 

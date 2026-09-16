@@ -8,7 +8,7 @@ Trang này chỉ ghi **những gì khác với bản gốc**. Hướng dẫn dù
 [README của bản gốc](https://github.com/nguyenphivn/fcitx5-lotus/blob/ban-dung/README.md) hoặc
 [trang chủ Lotus](https://lotusinputmethod.github.io/).
 
-- **Nhánh để dùng:** `ban-dung` (nhánh mặc định) = `dev` của bản gốc + 23 miếng vá.
+- **Nhánh để dùng:** `ban-dung` (nhánh mặc định) = `dev` của bản gốc + 24 miếng vá.
 - **Chi tiết từng vá, số đo, tác giả gốc trả lời ra sao, và hướng dẫn cài:**
   [KHAC-GI-SO-VOI-BAN-GOC.md](https://github.com/nguyenphivn/fcitx5-lotus/blob/ban-dung/KHAC-GI-SO-VOI-BAN-GOC.md)
 
@@ -71,6 +71,9 @@ Nói cho đúng:
 - **Chữ V hết màu đen trên panel tối của KDE** (issue #374, gặp ngay với giao diện mặc định Fedora
   44). Lotus đọc màu của panel thay vì màu cửa sổ ứng dụng. Chụp trước và sau trên máy thật: V đen
   thành V trắng. Mã sửa đã vào bản gốc (PR #497); bản này chỉ giữ thêm bài kiểm.
+- **Chữ V hết màu đen trên thanh trên cùng của GNOME** (Ubuntu Yaru, theme WhiteSur). Cùng lỗi với
+  KDE: Lotus hỏi màu ứng dụng thay vì màu thanh. Giờ đọc thẳng theme của GNOME Shell. Chưa gửi lên bản
+  gốc.
 - **Gõ đúng trong LibreOffice với chế độ uinput** (issue #162: `chao` + `f` ra `chaà`). Nguyên nhân
   không phải máy chậm: LibreOffice xử lý phím xoá theo kiểu hẹn sau, còn chữ mới chèn ngay nên vượt
   mặt. Bản này xoá bằng surrounding text riêng cho LibreOffice. Đo trên Writer: 30–36/60 từ sai →
@@ -98,7 +101,7 @@ Cả hai nằm ở [PR #492](https://github.com/LotusInputMethod/fcitx5-lotus/pu
 
 ### Kiểm thử
 
-- 12 bài kiểm thay vì 9: thêm kiểm bất biến trên chuỗi phím ngẫu nhiên, kiểm màu panel KDE, và tái
+- 13 bài kiểm thay vì 9: thêm kiểm bất biến trên chuỗi phím ngẫu nhiên, kiểm màu panel KDE và GNOME, và tái
   hiện lỗi giữ phím của issue #472.
 
 ## Bản này KHÔNG sửa

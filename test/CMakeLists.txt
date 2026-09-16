@@ -104,3 +104,22 @@ set_tests_properties(plasma_panel_theme PROPERTIES
     LABELS "unit;icon"
     TIMEOUT 20
 )
+
+add_executable(gnome_panel_theme
+    gnome-panel-theme.cpp
+    ${PROJECT_SOURCE_DIR}/src/lotus-gnome-theme.cpp
+    ${PROJECT_SOURCE_DIR}/src/lotus-utils.cpp
+)
+target_include_directories(gnome_panel_theme PRIVATE
+    ${PROJECT_BINARY_DIR}
+    ${PROJECT_SOURCE_DIR}/src
+)
+target_link_libraries(gnome_panel_theme PRIVATE
+    Fcitx5::Core
+    Fcitx5::Utils
+)
+add_test(NAME gnome_panel_theme COMMAND gnome_panel_theme)
+set_tests_properties(gnome_panel_theme PROPERTIES
+    LABELS "unit;icon"
+    TIMEOUT 20
+)

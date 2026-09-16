@@ -14,6 +14,7 @@
 #include "lotus-monitor.h"
 #include "lotus-utils.h"
 #include "lotus-icon-resolver.h"
+#include "lotus-gnome-theme.h"
 #include "lotus-plasma-theme.h"
 #include <optional>
 #include <sys/socket.h>
@@ -113,6 +114,15 @@ namespace fcitx {
         // two differ in the default Fedora/Kubuntu look (#374).
         if (isKdePlasmaSession(getEnv("XDG_CURRENT_DESKTOP"))) {
             if (const auto dark = isPlasmaPanelDark(plasmaThemeSearchPathsFromEnv())) {
+                cachedValue = *dark;
+                return cachedValue;
+            }
+        }
+
+        // GNOME Shell: same mismatch, the top bar follows the shell stylesheet
+        // (Ubuntu's Yaru bar is near-black under the light scheme).
+        if (isGnomeShellSession(getEnv("XDG_CURRENT_DESKTOP"))) {
+            if (const auto dark = isGnomePanelDark(gnomeShellThemeInfoFromEnv())) {
                 cachedValue = *dark;
                 return cachedValue;
             }
