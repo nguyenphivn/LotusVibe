@@ -781,8 +781,15 @@ namespace fcitx {
         }
         const auto&       surrounding = ic_->surroundingText();
         const std::string surrText    = surrounding.text();
-        bool isSurrText = engine_->config().useSurroundingTextIfPossible.value() && ic_->capabilityFlags().test(CapabilityFlag::SurroundingText) && surrounding.isValid() &&
-            !surrText.empty() && surrounding.cursor() == utf8::length(surrText);
+        // LibreOffice gán Backspace thành phím tắt (.uno:SwBackspace) và mọi phím tắt chạy HẸN SAU
+        // (AsyncAccelExec::execAsync), còn chữ commit chèn ngay → chữ vượt mặt phím xoá còn trong hàng
+        // ('chao'+f → 'chaà'; đo 16/09 Writer: 30–36/60 từ sai, chờ lâu hơn / sync mode / forwardKey đều không cứu).
+        // deleteSurroundingText thì Writer làm NGAY trên văn bản thật, tính từ con trỏ, nên không cần ảnh
+        // khớp cuối câu như app khác. Đo: 0/60 ở 70, 150, 350 ms.
+        const bool laLibreOffice = ic_->program() == "soffice" && realMode != LotusMode::Minecraft;
+        bool       isSurrText    = laLibreOffice ? ic_->capabilityFlags().test(CapabilityFlag::SurroundingText)
+                                                 : engine_->config().useSurroundingTextIfPossible.value() && ic_->capabilityFlags().test(CapabilityFlag::SurroundingText) &&
+                                                surrounding.isValid() && !surrText.empty() && surrounding.cursor() == utf8::length(surrText);
         if (!isSurrText && realMode != LotusMode::Minecraft) {
             ++expected_backspaces_;
             // Super Smooth bỏ lá chắn ở mọi ô để gõ nhanh, NHƯNG thanh địa chỉ trình duyệt vẫn cần
