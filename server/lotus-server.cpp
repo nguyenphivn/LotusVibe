@@ -437,8 +437,14 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // handle mouse (libinput)
-        if ((fds[1].revents & POLLIN) != 0) {
+        // handle libinput events (mouse clicks, and the keyboard we inject backspaces into)
+        //
+        // Not guarded by fds[1].revents: libinput_dispatch() above drains the fd into libinput's own
+        // queue on every iteration, including the ones where poll() returned for another fd or timed
+        // out. By the next poll() that fd is quiet again, so events queued this way would sit in the
+        // queue forever if we only drained it when POLLIN is set - which is exactly what happens
+        // while backspaces are pending, since then poll() uses a timeout and returns without POLLIN.
+        {
             struct libinput_event* event = nullptr;
 
             while ((event = libinput_get_event(li_ctx.get_li())) != nullptr) {
