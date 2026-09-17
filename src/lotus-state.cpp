@@ -488,6 +488,15 @@ namespace fcitx {
         ic_->updateUserInterface(UserInterfaceComponent::InputPanel);
     }
 
+
+    static std::string anhDo(const fcitx::SurroundingText& s) {
+        std::string t = s.text();
+        std::string o;
+        for (unsigned char c : t) {
+            if (c == '\n') o += "\\n"; else if (c < 0x20) o += "?"; else o += static_cast<char>(c);
+        }
+        return "valid=" + std::to_string(s.isValid()) + " cur=" + std::to_string(s.cursor()) + " anc=" + std::to_string(s.anchor()) + " len=" + std::to_string(fcitx_utf8_strlen(t.c_str())) + " [" + o + "]";
+    }
     bool LotusState::oDaXoaXong() const {
         const auto& s = ic_->surroundingText();
         if (!s.isValid()) {
@@ -570,6 +579,7 @@ namespace fcitx {
         if (!tu_timer && cho_surr_timer_) {
             cho_surr_timer_.reset();   // không reset từ trong chính callback của nó
         }
+        LOTUS_INFO("DO truoc-commit " + anhDo(ic_->surroundingText()));
         if (!pending_commit_string_.empty()) {
             ic_->commitString(pending_commit_string_);
             LOTUS_INFO("Commit: " + pending_commit_string_);
@@ -593,6 +603,7 @@ namespace fcitx {
             // v7: app khai "có surrounding text" nhưng gửi ảnh RỖNG (Konsole: valid=1 len=0 suốt) thì
             // không tin nào khớp được, chờ chỉ tốn trọn hạn mỗi dấu → đi đường ngủ cũ ở dưới.
             const bool anh_rong = ic_->surroundingText().text().empty();
+            LOTUS_INFO("DO bs-cuoi cap=" + std::to_string(ic_->capabilityFlags().test(CapabilityFlag::SurroundingText)) + " " + anhDo(ic_->surroundingText()));
             if (engine_->config().waitSurroundingEvent.value() && anh_rong) {
                 LOTUS_INFO("Surr wait skip: empty snapshot");
             }
@@ -638,6 +649,7 @@ namespace fcitx {
                     {
                         const auto& sd0 = ic_->surroundingText();
                         ++cho_so_tin_;
+                        LOTUS_INFO("DO tin " + std::to_string(da_cho_us / 1000) + "ms " + anhDo(sd0) + " xong=" + std::to_string(oDaXoaXong()) + " prefix=[" + cho_prefix_ + "] del=[" + cho_deleted_ + "]");
                         if (sd0.text() + "\x1f" + std::to_string(sd0.cursor()) != cho_anh_luc_gui_) {
                             cho_tin_khac_ = true;
                         }
@@ -826,6 +838,7 @@ namespace fcitx {
             replayBufferedKeys();
             return;
         }
+        LOTUS_INFO("DO gui " + anhDo(ic_->surroundingText()) + " old=[" + oldPreBuffer_ + "]");
         send_backspace_uinput(expected_backspaces_);
         LOTUS_INFO("Send " + std::to_string(expected_backspaces_) + " backspaces");
     }
