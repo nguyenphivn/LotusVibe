@@ -30,7 +30,7 @@ namespace fcitx {
     struct GnomeShellThemeInfo {
         // Name set in the User Themes extension; empty when the extension is
         // not enabled or no theme is chosen.
-        std::string              userThemeName;
+        std::string userThemeName;
         // GNOME_SHELL_SESSION_MODE, e.g. "ubuntu".  Empty means "user".
         std::string              sessionMode;
         std::string              home;

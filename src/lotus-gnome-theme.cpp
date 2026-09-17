@@ -157,9 +157,7 @@ namespace fcitx {
                 }
                 if (hasAlpha)
                     color.a = std::stod(trim(parts[3]));
-            } catch (...) {
-                return std::nullopt;
-            }
+            } catch (...) { return std::nullopt; }
             return color;
         }
 
@@ -203,7 +201,7 @@ namespace fcitx {
         // Every rule whose whole selector is "#panel"; later ones override.
         size_t pos = 0;
         while ((pos = css.find("#panel", pos)) != std::string::npos) {
-            const size_t after = pos + 6;
+            const size_t after          = pos + 6;
             const bool   startsSelector = pos == 0 || css[pos - 1] == '}' || std::isspace(static_cast<unsigned char>(css[pos - 1]));
             size_t       brace          = after;
             while (brace < css.size() && std::isspace(static_cast<unsigned char>(css[brace])))

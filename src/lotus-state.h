@@ -114,7 +114,7 @@ namespace fcitx {
         bool                    shouldCapitalize_      = false;
         bool                    isPrevPunctuation_     = false;
         int64_t                 lastDeactivateTime_    = 0;
-        int64_t                 deletionInterruptedAt_ = 0; ///< when deactivate() cut an in-flight replacement (0 = none)
+        int64_t                 deletionInterruptedAt_ = 0;     ///< when deactivate() cut an in-flight replacement (0 = none)
         bool                    tracking_modifier_tap_ = false; ///< Selected modifier held, waiting for consecutive keyup
         bool                    macro_skip_            = false; ///< Macro disabled for the current word
 
@@ -142,9 +142,9 @@ namespace fcitx {
         uint64_t                                         cho_surr_bat_dau_ = 0;
         uint64_t                                         cho_moc_giao_     = 0; // B33: lúc hẹn giao chữ (CLOCK_MONOTONIC, µs)
         bool                                             cho_dang_cho_     = false;
-        std::string                                      cho_prefix_;   // phần từ giữ lại sau khi xoá
-        std::string                                      cho_deleted_;  // phần phải biến mất
-        std::string                                      cho_anh_luc_gui_;  // ảnh chụp lúc bắn phím xoá
+        std::string                                      cho_prefix_;      // phần từ giữ lại sau khi xoá
+        std::string                                      cho_deleted_;     // phần phải biến mất
+        std::string                                      cho_anh_luc_gui_; // ảnh chụp lúc bắn phím xoá
         // v11: ảnh ĐÓNG BĂNG = quá hạn mà mọi tin đều y hệt ảnh lúc bắn (Edge thanh địa chỉ). Hai lần liền
         // → bỏ chờ, ngủ 8 ms × phím xoá như Slow; cứ `probeEvery` lần thăm dò lại một lần.
         int  cho_so_tin_              = 0;     // số tin trong lần chờ này

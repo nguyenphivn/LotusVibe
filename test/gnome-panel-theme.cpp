@@ -50,10 +50,10 @@ namespace {
         }
     }
 
-    const char* const kWhiteSurDark = "stage { color: black; }\n"
-                                      "#panel {\n  background-color: rgba(0, 0, 0, 0.15);\n  font-weight: 500;\n  color: white;\n"
-                                      "  height: 28px !important;\n  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.05);\n}\n"
-                                      "#panel .panel-button { color: black; }\n#panel.solid { background-color: #fff; }\n";
+    const char* const kWhiteSurDark  = "stage { color: black; }\n"
+                                       "#panel {\n  background-color: rgba(0, 0, 0, 0.15);\n  font-weight: 500;\n  color: white;\n"
+                                       "  height: 28px !important;\n  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.05);\n}\n"
+                                       "#panel .panel-button { color: black; }\n#panel.solid { background-color: #fff; }\n";
     const char* const kWhiteSurLight = "#panel {\n  background-color: rgba(255, 255, 255, 0.155);\n  color: white;\n}\n";
     const char* const kYaru          = ".x { color: #000; }\n #panel {\n  background-color: #131313;\n  font-weight: bold;\n  height: 2.2em;\n  transition-duration: 250ms; }\n";
 
@@ -86,14 +86,15 @@ int main() {
         std::printf("FAIL mkdtemp\n");
         return 1;
     }
-    const fs::path root(dir);
+    const fs::path             root(dir);
 
     fcitx::GnomeShellThemeInfo info;
     info.home     = (root / "home").string();
     info.dataHome = (root / "home/.local/share").string();
     info.dataDirs = {(root / "usr/share/ubuntu").string(), (root / "usr/share").string()};
 
-    writeFile(root / "usr/share/gnome-shell/modes/ubuntu.json", "{\n    \"parentMode\": \"user\",\n    \"stylesheetName\": \"Yaru/gnome-shell.css\",\n    \"colorScheme\": \"prefer-light\"\n}\n");
+    writeFile(root / "usr/share/gnome-shell/modes/ubuntu.json",
+              "{\n    \"parentMode\": \"user\",\n    \"stylesheetName\": \"Yaru/gnome-shell.css\",\n    \"colorScheme\": \"prefer-light\"\n}\n");
     writeFile(root / "usr/share/gnome-shell/theme/Yaru/gnome-shell.css", kYaru);
     writeFile(root / "home/.themes/WhiteSur-Dark/gnome-shell/gnome-shell.css", kWhiteSurDark);
     writeFile(root / "usr/share/gnome-shell/theme/Mode-Theme.css", "#panel { color: black; }");
@@ -106,7 +107,8 @@ int main() {
 
     info.userThemeName = "Not-Installed";
     path               = fcitx::gnomeShellStylesheet(info);
-    check("S2 missing_theme_falls_to_mode", path && *path == (root / "usr/share/gnome-shell/theme/Yaru/gnome-shell.css").string(), "missing user theme did not fall back to the Yaru mode stylesheet");
+    check("S2 missing_theme_falls_to_mode", path && *path == (root / "usr/share/gnome-shell/theme/Yaru/gnome-shell.css").string(),
+          "missing user theme did not fall back to the Yaru mode stylesheet");
 
     info.userThemeName = "Mode-Theme";
     path               = fcitx::gnomeShellStylesheet(info);
