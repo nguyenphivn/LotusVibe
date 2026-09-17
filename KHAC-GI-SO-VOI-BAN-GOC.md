@@ -15,7 +15,7 @@ cd LotusVibe
 git checkout ban-dung
 ```
 
-`ban-dung` = `upstream/dev` + đúng **24 miếng vá**, không thiếu commit nào của tác giả. Từ
+`ban-dung` = `upstream/dev` + đúng **23 miếng vá**, không thiếu commit nào của tác giả. Từ
 13/09/2026 đây cũng là **nhánh mặc định** của fork.
 
 Mấy nhánh khác là nhánh làm việc, **đừng lấy**:
@@ -388,28 +388,25 @@ Preedit/Slow thật ra chạy Smooth. Bộ đo mới sửa thẳng luật rồi 
 
 **Upstream:** bình luận vào issue #162 kèm nguyên nhân và số đo, chưa gửi PR.
 
-### Máy chủ gửi phím xoá qua đúng bàn phím người dùng đang gõ (`c4dc98d`, issue #506)
+### ĐÃ BỎ — máy chủ gửi phím xoá qua đúng bàn phím người dùng đang gõ (`c4dc98d`, issue #506)
 
-**Triệu chứng:** trên GNOME X11, gõ tiếng Việt làm cửa sổ GTK3 đứng 2–3 giây.
+**Gỡ khỏi `ban-dung` ngày 17/09/2026** bằng commit revert. Giữ mục này để khỏi ai làm lại.
 
-**Nguyên nhân:** mỗi lần phím đổi qua lại giữa hai thiết bị (bàn phím thật, rồi bàn phím ảo của Lotus
-gửi phím xoá), X11 nạp lại bảng phím cho mọi app; gnome-shell mất khoảng 300 ms cho việc đó và ngừng
-xác nhận khung hình. Tái hiện không cần Lotus: hai bàn phím ảo xen kẽ mỗi phím làm cửa sổ đứng 3,2 s,
-cùng chuỗi phím từ một thiết bị 0,13 s.
+**Lỗi có thật, nhưng chỉ trên GNOME X11:** gõ tiếng Việt làm cửa sổ GTK3 đứng 2–3 giây, vì mỗi lần phím
+đổi qua lại giữa bàn phím thật và bàn phím ảo của Lotus thì gnome-shell nạp lại bảng phím (~300 ms).
+Vá cũ ghi phím xoá thẳng vào `/dev/input/eventN` của bàn phím thật: 2048–2668 ms → 201 ms.
 
-**Vá:** máy chủ nhớ bàn phím vừa gõ (qua libinput) và ghi phím xoá thẳng vào `/dev/input/eventN` của
-nó. Ghi lỗi (rút bàn phím, thiếu quyền) thì quay về bàn phím ảo; `LOTUS_BACKSPACE_VIA_DEVICE=0` tắt
-hẳn. Không cần thêm quyền: dịch vụ vốn chạy nhóm `input`.
-
-**Đo:** câu 90 phím, 8 phím/giây: lần đứng lâu nhất 2048–2668 ms → 201 ms, CPU gnome-shell mỗi câu
-1,31 → 0,95 s. Chủ máy dùng bàn phím không dây chuyển qua lại giữa adapter và bluetooth vẫn gõ đúng.
-Chưa đo trên GNOME Wayland.
+**Vì sao bỏ:** đo trên chính iMac đã chuyển sang GNOME Wayland (driver nouveau), tắt vá bằng
+`LOTUS_BACKSPACE_VIA_DEVICE=0`: lần đứng lâu nhất ~204 ms, bằng lúc bật; đếm phím xoá qua node bàn
+phím xác nhận đúng đường (420 khi tắt, 630 khi bật); đối chứng cho app đứng 1,5 s đo ra 1557 ms.
+GNOME X11 đã bị bỏ ở các bản mới, máy này cũng không còn dùng X11, nên không đáng giữ thêm mã ghi vào
+thiết bị thật. Còn hở: số X11 đo với driver nvidia 470, chưa đo X11 với nouveau.
 
 ### Máy chủ xử lý hết hàng sự kiện libinput mỗi vòng (`02b68d0`, issue #507)
 
 **Nguyên nhân:** `libinput_dispatch()` chạy mọi vòng và rút cạn sự kiện vào hàng riêng, nhưng vòng rút
 hàng chỉ chạy khi `poll()` báo có dữ liệu. Lúc đang gửi phím xoá, `poll()` hết giờ chờ mà không báo gì,
-nên sự kiện nằm đó tới lần có phím kế tiếp. Vá trên (`c4dc98d`) cần sự kiện phím tới kịp nên mới lộ ra;
+nên sự kiện nằm đó tới lần có phím kế tiếp. Lộ ra lúc làm vá #506 (đã bỏ, ở trên); vá này vẫn giữ vì
 với tính năng bấm chuột ngắt từ thì cú bấm bị xử lý trễ.
 
 **Vá:** rút hàng vô điều kiện ngay sau `libinput_dispatch()`.
@@ -418,7 +415,7 @@ với tính năng bấm chuột ngắt từ thì cú bấm bị xử lý trễ.
 
 **Đo trên gnome-terminal X11, 60 câu mỗi mức:** máy rảnh thì 2 ms và 4 ms đều đúng hết. Máy tải nặng
 (6 lõi bận ở `nice 15`, load khoảng 10): 2 ms đúng 39–46/60, 4 ms đúng 58–60/60, 8 ms 60/60. Máy tính
-tiền kiêm chạy CI nên tải nặng là chuyện có thật. Đã ghi trong issue #506.
+tiền kiêm chạy CI nên tải nặng là chuyện có thật. Đã ghi trong bình luận ở issue #506.
 
 ### Icon chữ V màu đen trên thanh trên cùng của GNOME
 

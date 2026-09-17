@@ -80,25 +80,8 @@ class UinputDevice {
         return guard_.get();
     }
 
-    /**
-     * @brief Inject backspaces into a real keyboard's /dev/input/eventN instead of our virtual device.
-     *
-     * On X11 the server switches the master keyboard's keymap every time keys alternate between two
-     * slave devices. Every client then gets XkbNewKeyboardNotify and reloads the keymap; gnome-shell
-     * takes ~300 ms doing so and stops acknowledging frames, which freezes GTK3 clients for seconds
-     * (they wait for _NET_WM_FRAME_DRAWN with no timeout). Typing an accented word alternates on every
-     * key: user's keyboard -> our device -> user's keyboard. Injecting into the very device the user
-     * just typed on removes the alternation, so no keymap reload happens.
-     *
-     * Pass -1 to fall back to the virtual device. Not owned; the caller keeps the fd alive.
-     */
-    void set_injection_fd(int fd) {
-        injection_fd_ = fd;
-    }
-
   private:
     FdGuard guard_;
-    int     injection_fd_ = -1;
 };
 
 /**

@@ -12,7 +12,7 @@ Trang này chỉ ghi **những gì khác với bản gốc**. Hướng dẫn dù
 [README của bản gốc](https://github.com/nguyenphivn/LotusVibe/blob/ban-dung/README.md) hoặc
 [trang chủ Lotus](https://lotusinputmethod.github.io/).
 
-- **Nhánh để dùng:** `ban-dung` (nhánh mặc định) = `dev` của bản gốc + 24 miếng vá.
+- **Nhánh để dùng:** `ban-dung` (nhánh mặc định) = `dev` của bản gốc + 23 miếng vá.
 - **Chi tiết từng vá, số đo, tác giả gốc trả lời ra sao, và hướng dẫn cài:**
   [KHAC-GI-SO-VOI-BAN-GOC.md](https://github.com/nguyenphivn/LotusVibe/blob/ban-dung/KHAC-GI-SO-VOI-BAN-GOC.md)
 
@@ -84,9 +84,8 @@ Nói cho đúng:
   không phải máy chậm: LibreOffice xử lý phím xoá theo kiểu hẹn sau, còn chữ mới chèn ngay nên vượt
   mặt. Bản này xoá bằng surrounding text riêng cho LibreOffice. Đo trên Writer: 30–36/60 từ sai →
   0/60; Calc, Impress 0/60. Đã báo ở #162, chưa gửi mã.
-- **Hết đứng màn hình 2–3 giây khi gõ trên GNOME X11.** Máy chủ gửi phím xoá qua đúng bàn phím người
-  dùng đang gõ thay vì bàn phím ảo, nên X11 không phải nạp lại bảng phím. Lần đứng lâu nhất 2,0–2,7 s →
-  0,2 s. Kèm một vá để máy chủ không bỏ sót sự kiện bàn phím. Đã báo ở #506, #507, chưa gửi mã.
+- **Máy chủ không bỏ sót sự kiện libinput** khi đang gửi phím xoá, nên cú bấm chuột ngắt từ không bị
+  xử lý trễ. Đã báo ở #507, chưa gửi mã.
 - **Chờ 4 ms mỗi phím xoá thay vì 2** ở Smooth và Super Smooth. Máy tải nặng: 2 ms đúng 39–46/60
   câu, 4 ms đúng 58–60/60. Máy rảnh không khác.
 

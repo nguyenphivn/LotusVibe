@@ -16,8 +16,6 @@
 #include <signal.h>
 #include <limits.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <string>
 
 std::atomic<bool> g_running{true};
 
@@ -73,6 +71,8 @@ bool UinputDevice::initialize() {
 }
 
 void UinputDevice::send_backspace() {
+    if (!guard_.is_valid())
+        return;
     struct input_event ev[4]{};
     ev[0].type  = EV_KEY;
     ev[0].code  = KEY_BACKSPACE;
@@ -82,18 +82,6 @@ void UinputDevice::send_backspace() {
     ev[2].code  = KEY_BACKSPACE;
     ev[2].value = 0; // Release
     // Zero-initialize ev[3] via {} set this event to SYN_REPORT
-
-    // Preferred path: the keyboard the user is typing on (see set_injection_fd). Falls back to the
-    // virtual device whenever that write fails - unplugged keyboard, revoked fd, missing permission.
-    if (injection_fd_ >= 0) {
-        if (write(injection_fd_, ev, sizeof(ev)) == static_cast<ssize_t>(sizeof(ev)))
-            return;
-        LotusLogger::instance().warn("Injection into the real keyboard failed, using the virtual device");
-        injection_fd_ = -1;
-    }
-
-    if (!guard_.is_valid())
-        return;
     write(guard_.get(), ev, sizeof(ev));
 }
 
@@ -280,16 +268,6 @@ int main(int argc, char* argv[]) {
     FdGuard          kb_client_fd;
     int              pending_backspaces = 0;
 
-    // Backspaces go into the keyboard the user just typed on, not into our own virtual device; see
-    // UinputDevice::set_injection_fd for why. Set LOTUS_BACKSPACE_VIA_DEVICE=0 to keep the old path.
-    FdGuard     real_kbd_fd;
-    std::string real_kbd_node;
-    bool        backspace_via_device = true;
-    if (const char* v = std::getenv("LOTUS_BACKSPACE_VIA_DEVICE"); v != nullptr && std::strcmp(v, "0") == 0) {
-        backspace_via_device = false;
-        LotusLogger::instance().info("Backspace injection into the real keyboard disabled by environment");
-    }
-
     struct sigaction sa{};
     sa.sa_handler = signal_handler;
     sigemptyset(&sa.sa_mask);
@@ -437,7 +415,7 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // handle libinput events (mouse clicks, and the keyboard we inject backspaces into)
+        // handle libinput events (mouse clicks)
         //
         // Not guarded by fds[1].revents: libinput_dispatch() above drains the fd into libinput's own
         // queue on every iteration, including the ones where poll() returned for another fd or timed
@@ -460,42 +438,6 @@ int main(int argc, char* argv[]) {
                             }
                         }
                     }
-                } else if (type == LIBINPUT_EVENT_KEYBOARD_KEY && backspace_via_device) {
-                    // Remember which keyboard produced this key so the next backspace can be injected
-                    // into it. Keys we injected ourselves come back from that very device, so they
-                    // simply re-confirm the current choice; keys from our virtual device are ignored
-                    // (it only exists for the fallback path).
-                    struct libinput_device* dev  = libinput_event_get_device(event);
-                    const char*             name = libinput_device_get_name(dev);
-                    if (name == nullptr || std::strcmp(name, "Lotus-Uinput-Server") != 0) {
-                        struct udev_device* udev_dev = libinput_device_get_udev_device(dev);
-                        const char*         node     = (udev_dev != nullptr) ? udev_device_get_devnode(udev_dev) : nullptr;
-                        if (node != nullptr && real_kbd_node != node) {
-                            int fd = open(node, O_WRONLY | O_CLOEXEC);
-                            if (fd >= 0) {
-                                real_kbd_fd.reset(fd);
-                                real_kbd_node = node;
-                                uinput.set_injection_fd(fd);
-                                LotusLogger::instance().info("Backspaces now go to " + std::string(name != nullptr ? name : "?") + " (" + real_kbd_node + ")");
-                            } else {
-                                LotusLogger::instance().warn("Cannot open " + std::string(node) + " for writing, keeping the virtual device");
-                            }
-                        }
-                        if (udev_dev != nullptr)
-                            udev_device_unref(udev_dev);
-                    }
-                } else if (type == LIBINPUT_EVENT_DEVICE_REMOVED) {
-                    struct libinput_device* dev      = libinput_event_get_device(event);
-                    struct udev_device*     udev_dev = libinput_device_get_udev_device(dev);
-                    const char*             node     = (udev_dev != nullptr) ? udev_device_get_devnode(udev_dev) : nullptr;
-                    if (node != nullptr && real_kbd_node == node) {
-                        LotusLogger::instance().info("Keyboard " + real_kbd_node + " removed, back to the virtual device");
-                        uinput.set_injection_fd(-1);
-                        real_kbd_fd.reset(-1);
-                        real_kbd_node.clear();
-                    }
-                    if (udev_dev != nullptr)
-                        udev_device_unref(udev_dev);
                 } else if (type == LIBINPUT_EVENT_DEVICE_ADDED) {
                     struct libinput_device* dev  = libinput_event_get_device(event);
                     const char*             name = libinput_device_get_name(dev);
