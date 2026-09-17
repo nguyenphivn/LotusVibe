@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <dlfcn.h>
 #include <filesystem>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -194,23 +197,48 @@ struct TestInstance {
  * and the commit) never fire unless the loop runs, as it does in real fcitx5.
  *
  * `EventLoop::exec()` cannot be used for this: after `exit()` an sd-event loop
- * is finished and a second `exec()` throws (-ESTALE). sd-event's own
- * single-step call is not exposed by fcitx, so it is looked up at runtime;
- * libsystemd is already loaded by fcitx5-utils.
+ * is finished and a second `exec()` throws (-ESTALE). fcitx does not expose a
+ * single-step call, so the backend's own one is looked up at runtime; the
+ * backend library is already loaded by fcitx5-utils:
+ * - sd-event (fcitx5 built with systemd, e.g. Fedora): `sd_event_run`;
+ * - libuv (fcitx5 built with -DUSE_SYSTEMD=Off, as the CI builds it on Arch):
+ *   `uv_run` in UV_RUN_NOWAIT mode, which fires every timer already due.
+ *   `nativeHandle()` is the `uv_loop_t*` there (fcitx5 event_libuv.cpp).
  */
 inline void pumpEventLoop(fcitx::Instance& instance, int ms) {
-    using SdEventRun      = int (*)(void*, uint64_t);
-    static const auto run = reinterpret_cast<SdEventRun>(dlsym(RTLD_DEFAULT, "sd_event_run"));
-    if (std::string(fcitx::EventLoop::impl()) != "sd-event" || run == nullptr) {
-        std::cerr << "pumpEventLoop: unsupported event loop '" << fcitx::EventLoop::impl() << "'\n";
-        std::abort();
-    }
-    void*          handle = instance.eventLoop().nativeHandle();
-    const uint64_t end    = fcitx::now(CLOCK_MONOTONIC) + (static_cast<uint64_t>(ms) * 1000ULL);
-    for (uint64_t t = fcitx::now(CLOCK_MONOTONIC); t < end; t = fcitx::now(CLOCK_MONOTONIC)) {
-        if (run(handle, end - t) < 0) {
-            std::cerr << "pumpEventLoop: sd_event_run failed\n";
+    const std::string impl   = fcitx::EventLoop::impl();
+    void*             handle = instance.eventLoop().nativeHandle();
+    const uint64_t    end    = fcitx::now(CLOCK_MONOTONIC) + (static_cast<uint64_t>(ms) * 1000ULL);
+    if (impl == "sd-event") {
+        using SdEventRun      = int (*)(void*, uint64_t);
+        static const auto run = reinterpret_cast<SdEventRun>(dlsym(RTLD_DEFAULT, "sd_event_run"));
+        if (run == nullptr) {
+            std::cerr << "pumpEventLoop: sd_event_run not found\n";
             std::abort();
         }
+        for (uint64_t t = fcitx::now(CLOCK_MONOTONIC); t < end; t = fcitx::now(CLOCK_MONOTONIC)) {
+            if (run(handle, end - t) < 0) {
+                std::cerr << "pumpEventLoop: sd_event_run failed\n";
+                std::abort();
+            }
+        }
+        return;
     }
+    if (impl == "libuv") {
+        using UvRun                   = int (*)(void*, int);
+        static const auto run         = reinterpret_cast<UvRun>(dlsym(RTLD_DEFAULT, "uv_run"));
+        constexpr int     uvRunNowait = 2; // UV_RUN_NOWAIT, stable across libuv 1.x
+        if (run == nullptr) {
+            std::cerr << "pumpEventLoop: uv_run not found\n";
+            std::abort();
+        }
+        for (uint64_t t = fcitx::now(CLOCK_MONOTONIC); t < end; t = fcitx::now(CLOCK_MONOTONIC)) {
+            run(handle, uvRunNowait);
+            std::this_thread::sleep_for(std::chrono::microseconds(std::min<uint64_t>(1000, end - t)));
+        }
+        run(handle, uvRunNowait); // a timer due exactly at `end`
+        return;
+    }
+    std::cerr << "pumpEventLoop: unsupported event loop '" << impl << "'\n";
+    std::abort();
 }
