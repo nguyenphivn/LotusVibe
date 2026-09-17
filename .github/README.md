@@ -89,8 +89,8 @@ Nói cho đúng:
 - **Gõ được Messenger trên Facebook với chế độ uinput** (issue #267 của bản gốc, mở từ 05/2026:
   `tieengs vieetj` ra `iếngiệt`). Hai nguyên nhân: Messenger báo ô đã xoá khi mới xoá một nửa, và
   Facebook vẽ lại ô soạn tin sau đó, đè mất chữ tới sớm. Cần bật `WaitSurroundingEvent=True` và
-  `WaitSurroundingSettleMs=15`. Chủ máy gõ thử trên Edge thấy đúng; chưa dò mức chờ nhỏ nhất, chưa đo
-  Firefox. Chưa gửi lên bản gốc.
+  `WaitSurroundingSettleMs=40`. Chủ máy dò trên Edge: 25 ms còn sai, 30 ms đúng, chọn 40 ms cho dư;
+  chưa đo Firefox. Đã báo cách khắc phục ở #267, chưa gửi mã.
 - **Chờ 4 ms mỗi phím xoá thay vì 2** ở Smooth và Super Smooth. Máy tải nặng: 2 ms đúng 39–46/60
   câu, 4 ms đúng 58–60/60. Máy rảnh không khác.
 

@@ -98,7 +98,7 @@ Máy gốc còn bật `WaitSurroundingEvent=True` trong `~/.config/fcitx5/conf/l
 mặc định tắt). Vá thanh địa chỉ không phụ thuộc tuỳ chọn này, nhưng mọi lượt đo trên máy gốc đều
 chạy khi nó bật.
 
-Máy Fedora còn đặt `WaitSurroundingSettleMs=15` cùng tệp đó, để gõ được Messenger trên Facebook
+Máy Fedora còn đặt `WaitSurroundingSettleMs=40` cùng tệp đó, để gõ được Messenger trên Facebook
 (vá nhóm E, mặc định 0). Tuỳ chọn này chỉ có tác dụng khi `WaitSurroundingEvent=True`.
 
 **Cập nhật bản mới về sau:** trong thư mục `LotusVibe`, chạy `git pull --recurse-submodules`,
@@ -462,14 +462,29 @@ bỏ chờ retry), nên nhiều khả năng lỗi dễ lộ hơn. **Chưa đo** 
 | Ô | Trước | Sau |
 | --- | --- | --- |
 | Messenger, chủ máy gõ tay, chỉ vá (1) | mất chữ | vẫn mất chữ |
-| Messenger, chủ máy gõ tay, vá (1) + `WaitSurroundingSettleMs=15` | mất chữ | gõ đúng; 11 lần giao theo sự kiện ở mốc 20–41 ms |
+| Messenger, bản dựng có log đo, vá (1) + `WaitSurroundingSettleMs=15` | mất chữ | gõ đúng; 11 lần giao theo sự kiện ở mốc 20–41 ms |
+| Messenger, gói RPM không log, `WaitSurroundingSettleMs=15` | mất chữ | vẫn mất chữ |
+| Messenger, gói RPM không log, `WaitSurroundingSettleMs=25` | mất chữ | chủ máy ước đúng khoảng 9/10 dòng |
+| Messenger, gói RPM không log, `WaitSurroundingSettleMs=30` | mất chữ | chủ máy thấy đúng (chưa đếm từng dòng) |
+| Messenger, gói RPM không log, `WaitSurroundingSettleMs=40` | mất chữ | gõ đúng |
 | Ô Lexical trơn, bàn phím ảo, 10 lượt, 50 ms/phím, chỉ vá (1) | chưa đo | 10/10 |
 
 ctest 16/16. Ba bài mới: ảnh nửa vời, chờ sau khi ảnh xong, và chờ ở nhánh `ngay`. Gỡ dòng
 `cho_dang_cho_ = true` trong `giaoSauKhiLang` thì đỏ đúng bài `super_smooth_settle_wait_immediate`.
 
-**Còn hở:** 15 ms mới là một lần thử thành công, chưa dò mức nhỏ nhất. Chưa đo ô Lexical trơn khi bật
-15 ms. Chưa đo trên Firefox, và chưa đo đường `WaitSurroundingEvent=False`. Đường đó chỉ so vị trí con
+**Mức chờ chọn 40 ms (dò 17/09):** 15 ms chỉ đúng trên bản dựng có log đo. Nhiều khả năng mỗi dòng log tốn thời
+gian nên chữ thật ra giao muộn hơn 15 ms (chưa đo riêng để chứng minh) (mốc 20–41 ms ở bảng trên); gói RPM không log thì 15 ms lại mất chữ.
+Chủ máy gõ tay dò trên gói RPM: 25 ms còn sai, 30 ms đúng. Chọn 40 ms = mức thấp nhất đúng cộng 10 ms dư,
+vì 25 ms còn sai lẻ tẻ (ranh giới sát) và mỗi mức mới thử một lượt.
+
+Mức chờ áp cho mọi ô báo được nội dung (không riêng Facebook), chỉ ở lần thay chữ có phím xoá; phím gõ
+chen vào lúc chờ được giữ lại rồi đưa ra sau.
+
+**Bẫy đo riêng của vá này:** đo mức chờ trên bản dựng có log thì con số ra thấp hơn thật. Dò mức chờ phải
+dùng bản không log.
+
+**Còn hở:** mức 30 ms chưa đếm đủ 10 dòng, máy tải nặng chưa đo. Chưa đo ô Lexical trơn khi bật
+mức chờ. Chưa đo trên Firefox, và chưa đo đường `WaitSurroundingEvent=False`. Đường đó chỉ so vị trí con
 trỏ nên có thể mắc đúng lỗi (1).
 
 **Bẫy đo đã gặp:** trang thử đo bằng bàn phím ảo từng cho 0/10 và 1/10 mà không phải lỗi bộ gõ. Cửa sổ
@@ -477,7 +492,7 @@ Edge mới chưa bật Lotus. Trang tự xoá ô nên Lotus còn nhớ từ lư�
 trỏ giữa các lượt). Phím Esc làm ô Lexical mất chọn. Bộ đo (trang Lexical tự ghi sự kiện, máy chủ nhỏ,
 kịch bản chỉ gõ khi trang đang được chọn) chưa đưa vào workbench.
 
-**Upstream:** chưa báo ở #267, chưa gửi mã.
+**Upstream:** đã báo cách khắc phục ở #267 (17/09, sau đó sửa mức chờ thành 40 ms), chưa gửi mã.
 
 ### Icon chữ V màu đen trên thanh trên cùng của GNOME
 
