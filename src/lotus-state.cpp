@@ -534,6 +534,18 @@ namespace fcitx {
         if (!cho_deleted_.empty() && endsWith(before, cho_prefix_ + cho_deleted_)) {
             return false; // ảnh cũ: phần cần xoá vẫn còn
         }
+        // Messenger trên Edge (Wayland) báo hai nhịp cho một phím xoá: con trỏ lùi trước, chữ trong ô
+        // xoá sau ('tie\n\n' con trỏ 2, rồi mới 'ti\n\n'). Chỉ nhìn phần trước con trỏ thì ảnh nửa vời
+        // trông như đã xoá xong; giao chữ lúc đó bị trang vứt, phím xoá lượt sau ăn vào chữ thật
+        // ('tieengs vieetj' → 'iếngiệt', đo 17/09: 3/3 lần giao trên ảnh nửa vời mất chữ, 3/3 trên ảnh
+        // khớp vào đủ). Chữ ngay sau con trỏ còn là chữ đầu của phần cần xoá ⇒ ảnh chưa xong, chờ tiếp.
+        if (!cho_deleted_.empty() && it != t.end()) {
+            const auto hetChuSau = utf8::nextChar(it);
+            const auto hetChuXoa = utf8::nextChar(cho_deleted_.begin());
+            if (std::string(it, hetChuSau) == std::string(cho_deleted_.begin(), hetChuXoa)) {
+                return false;
+            }
+        }
         return endsWith(before, cho_prefix_);
     }
 
