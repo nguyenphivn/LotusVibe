@@ -698,7 +698,7 @@ namespace fcitx {
                 const auto nguong = static_cast<uint64_t>(engine_->config().waitSurroundingMinPerKeyMs.value())
                                     * static_cast<uint64_t>(std::max(expected_backspaces_, 1)) * 1000ULL;
                 const auto moc_dau = nguong < han ? cho_surr_bat_dau_ + nguong : cho_surr_bat_dau_ + han;
-                cho_surr_timer_ = instance->eventLoop().addTimeEvent(CLOCK_MONOTONIC, moc_dau, 1000, [this, han](EventSourceTime* t, uint64_t) {
+                cho_surr_timer_    = instance->eventLoop().addTimeEvent(CLOCK_MONOTONIC, moc_dau, 1000, [this, han](EventSourceTime* t, uint64_t) {
                     if (!cho_dang_cho_ || cho_hen_gio_ || !is_deleting_.load()) {
                         return false;
                     }
