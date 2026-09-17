@@ -453,7 +453,7 @@ GNOME Flashback và mấy desktop tự vẽ thanh riêng), Lotus tìm tệp CSS 
 **Chưa kiểm:** nhìn icon trên màn hình sau vá (lúc dựng màn hình đang khoá, GNOME tắt khay khi khoá);
 GNOME gốc Fedora/Arch; GNOME Wayland; tiện ích làm thanh trong suốt khác; `clang-format` (máy không có).
 
-**Upstream:** chưa gửi.
+**Upstream:** issue #508, chưa gửi PR.
 
 ## Cấu hình nên đặt kèm
 
