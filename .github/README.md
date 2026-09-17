@@ -26,6 +26,8 @@ trình duyệt (Firefox, Edge), web app như Lark, và terminal như Alacritty.
   ghi sai tên Lotus sẽ lặng lẽ quay về Preedit.
 - Đặt theo từng app: trong `~/.config/fcitx5/conf/lotus-app-rules.conf` dùng số `3`, ví dụ
   `firefox=3`.
+- Kiểu gõ chính là **Telex** (`InputMethod=Telex` trong `lotus.conf`). Mọi lượt đo và dùng hằng ngày
+  của bản này đều gõ Telex; VNI và các kiểu gõ khác chưa kiểm.
 - Không khuyên chế độ Surrounding Text: bản này không sửa chế độ đó.
 - Lời khuyên này chỉ đúng cho bản fork. Super Smooth của bản gốc chưa có vá chống lặp chữ ở thanh
   địa chỉ trình duyệt.
