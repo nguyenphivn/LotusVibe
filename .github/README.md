@@ -86,6 +86,11 @@ Nói cho đúng:
   0/60; Calc, Impress 0/60. Đã báo ở #162, chưa gửi mã.
 - **Máy chủ không bỏ sót sự kiện libinput** khi đang gửi phím xoá, nên cú bấm chuột ngắt từ không bị
   xử lý trễ. Đã báo ở #507, chưa gửi mã.
+- **Gõ được Messenger trên Facebook với chế độ uinput** (issue #267 của bản gốc, mở từ 05/2026:
+  `tieengs vieetj` ra `iếngiệt`). Hai nguyên nhân: Messenger báo ô đã xoá khi mới xoá một nửa, và
+  Facebook vẽ lại ô soạn tin sau đó, đè mất chữ tới sớm. Cần bật `WaitSurroundingEvent=True` và
+  `WaitSurroundingSettleMs=15`. Chủ máy gõ thử trên Edge thấy đúng; chưa dò mức chờ nhỏ nhất, chưa đo
+  Firefox. Chưa gửi lên bản gốc.
 - **Chờ 4 ms mỗi phím xoá thay vì 2** ở Smooth và Super Smooth. Máy tải nặng: 2 ms đúng 39–46/60
   câu, 4 ms đúng 58–60/60. Máy rảnh không khác.
 
@@ -106,8 +111,8 @@ Cả hai nằm ở [PR #492](https://github.com/LotusInputMethod/fcitx5-lotus/pu
 
 ### Kiểm thử
 
-- 13 bài kiểm thay vì 9: thêm kiểm bất biến trên chuỗi phím ngẫu nhiên, kiểm màu panel KDE và GNOME, và tái
-  hiện lỗi giữ phím của issue #472.
+- 16 bài kiểm thay vì 9: thêm kiểm bất biến trên chuỗi phím ngẫu nhiên, kiểm màu panel KDE và GNOME, tái
+  hiện lỗi giữ phím của issue #472, và ba bài cho lỗi Messenger trên Facebook.
 
 ## Bản này KHÔNG sửa
 

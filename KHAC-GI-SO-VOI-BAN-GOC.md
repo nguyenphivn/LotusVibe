@@ -98,6 +98,9 @@ Máy gốc còn bật `WaitSurroundingEvent=True` trong `~/.config/fcitx5/conf/l
 mặc định tắt). Vá thanh địa chỉ không phụ thuộc tuỳ chọn này, nhưng mọi lượt đo trên máy gốc đều
 chạy khi nó bật.
 
+Máy Fedora còn đặt `WaitSurroundingSettleMs=15` cùng tệp đó, để gõ được Messenger trên Facebook
+(vá nhóm E, mặc định 0). Tuỳ chọn này chỉ có tác dụng khi `WaitSurroundingEvent=True`.
+
 **Cập nhật bản mới về sau:** trong thư mục `LotusVibe`, chạy `git pull --recurse-submodules`,
 lặp lại bước 3, rồi `sudo systemctl restart fcitx5-lotus-server@$(whoami).service` và khởi động lại
 fcitx5.
@@ -416,6 +419,65 @@ với tính năng bấm chuột ngắt từ thì cú bấm bị xử lý trễ.
 **Đo trên gnome-terminal X11, 60 câu mỗi mức:** máy rảnh thì 2 ms và 4 ms đều đúng hết. Máy tải nặng
 (6 lõi bận ở `nice 15`, load khoảng 10): 2 ms đúng 39–46/60, 4 ms đúng 58–60/60, 8 ms 60/60. Máy tính
 tiền kiêm chạy CI nên tải nặng là chuyện có thật. Đã ghi trong bình luận ở issue #506.
+
+### Messenger trên Facebook mất chữ ở chế độ uinput (`60144f9`, `ab5b307`)
+
+**Triệu chứng:** gõ Telex trong ô soạn tin Messenger trên facebook.com, Edge, KDE Wayland, Super Smooth:
+`tieengs vieetj` ra `iếngiệt`. Chữ có dấu vẫn đúng nhưng mất chữ phía trước (`t`, dấu cách, `v`). Lark
+và ô soạn thảo Lexical trơn (cùng bộ soạn thảo Messenger dùng) không bị.
+
+**Xuất phát từ đâu:** lỗi gốc có từ bản chính. Issue
+[#267](https://github.com/LotusInputMethod/fcitx5-lotus/issues/267) mở ngày 06/05/2026 (bản 3.0.3),
+nhiều người xác nhận; #268 bị đóng vì trùng, #302 (Messenger trên Chrome) bị đóng không lời. Lỗi chỉ
+gặp trên các trang của Meta (Facebook, Messenger, Threads), ở cả Firefox lẫn họ Chromium. Tác giả cho là
+Meta đổi cách xử lý nhập liệu, khuyên tạm dùng Uinput (Slow) hoặc Preedit. Issue vẫn mở. Bản fix tác giả
+đẩy lên `dev` ngày 28–29/08 (`aaacb63`, `9d56be6`) là tuỳ chọn `useSurroundingTextIfPossible`, mặc định
+tắt, chính tác giả ghi là "chưa ổn định"; máy này không bật nó.
+
+Trên máy này, đoạn mã hỏng là của fork: đường chờ sự kiện surrounding text (`WaitSurroundingEvent`,
+nhóm B), chỉ fork có. Fork cũng rút ngắn thời gian chờ so với bản gốc (khoảng cách phím xoá 5 → 0 ms,
+bỏ chờ retry), nên nhiều khả năng lỗi dễ lộ hơn. **Chưa đo** bản gốc hay đường mặc định của fork
+(`WaitSurroundingEvent=False`) trên Messenger, nên chưa nói được fork làm lỗi nặng thêm bao nhiêu.
+
+**Nguyên nhân, đo bằng dòng log tạm in ảnh ô chữ Edge báo về (đã gỡ, nằm ở nhánh `do/messenger-edge`):**
+
+1. **Ảnh nửa vời.** Mỗi phím xoá, Messenger báo con trỏ lùi trước, chữ trong ô xoá sau: `tie\n\n`
+   con trỏ 2, vài ms sau mới `ti\n\n`. `oDaXoaXong` chỉ nhìn phần trước con trỏ nên tưởng đã xoá xong
+   và giao chữ. Trang vứt chữ đó, rồi phím xoá của lần thay sau ăn vào chữ thật. Đo 17/09: 3/3 lần giao
+   trên ảnh nửa vời mất chữ, 3/3 lần giao trên ảnh khớp vào đủ. Ô Lexical trơn không báo kiểu này: nó
+   bôi đen chữ sắp xoá (con trỏ và neo lệch nhau) rồi mới xoá.
+2. **Facebook vẽ lại ô soạn tin sau khi ảnh đã báo xoá xong.** Sửa (1) xong, chủ máy gõ tay ba lần vẫn
+   mất chữ: 5/5 lần giao ở mốc 3–12 ms tính từ phím xoá cuối bị mất, 6/6 lần giao ở mốc 17 hoặc 51 ms
+   vào đủ. Lần vẽ lại này không phát sự kiện surrounding text nào, nên chỉ chờ được theo thời gian. Khớp
+   với nhận xét của kimxuanhong ở #267 ("timing chưa đúng, xoá xong cần đợi thêm rồi mới commit").
+
+**Vá:**
+
+- `60144f9`: chữ ngay sau con trỏ vẫn là chữ đầu của phần cần xoá thì ảnh chưa xong, chờ tiếp.
+- `ab5b307`: tuỳ chọn `WaitSurroundingSettleMs`. Ảnh báo xoá xong thì hẹn giao chữ sau N ms, dùng lại
+  đúng trạng thái chờ hẹn giờ có sẵn (phím chen vào thì chờ nốt rồi giao). Mặc định 0, hành vi không đổi.
+
+**Đo:** máy Fedora 44, KDE Wayland, Edge 153 flatpak, Super Smooth, `WaitSurroundingEvent=True`.
+
+| Ô | Trước | Sau |
+| --- | --- | --- |
+| Messenger, chủ máy gõ tay, chỉ vá (1) | mất chữ | vẫn mất chữ |
+| Messenger, chủ máy gõ tay, vá (1) + `WaitSurroundingSettleMs=15` | mất chữ | gõ đúng; 11 lần giao theo sự kiện ở mốc 20–41 ms |
+| Ô Lexical trơn, bàn phím ảo, 10 lượt, 50 ms/phím, chỉ vá (1) | chưa đo | 10/10 |
+
+ctest 16/16. Ba bài mới: ảnh nửa vời, chờ sau khi ảnh xong, và chờ ở nhánh `ngay`. Gỡ dòng
+`cho_dang_cho_ = true` trong `giaoSauKhiLang` thì đỏ đúng bài `super_smooth_settle_wait_immediate`.
+
+**Còn hở:** 15 ms mới là một lần thử thành công, chưa dò mức nhỏ nhất. Chưa đo ô Lexical trơn khi bật
+15 ms. Chưa đo trên Firefox, và chưa đo đường `WaitSurroundingEvent=False`. Đường đó chỉ so vị trí con
+trỏ nên có thể mắc đúng lỗi (1).
+
+**Bẫy đo đã gặp:** trang thử đo bằng bàn phím ảo từng cho 0/10 và 1/10 mà không phải lỗi bộ gõ. Cửa sổ
+Edge mới chưa bật Lotus. Trang tự xoá ô nên Lotus còn nhớ từ lượt trước (phải bấm một phím di chuyển con
+trỏ giữa các lượt). Phím Esc làm ô Lexical mất chọn. Bộ đo (trang Lexical tự ghi sự kiện, máy chủ nhỏ,
+kịch bản chỉ gõ khi trang đang được chọn) chưa đưa vào workbench.
+
+**Upstream:** chưa báo ở #267, chưa gửi mã.
 
 ### Icon chữ V màu đen trên thanh trên cùng của GNOME
 
