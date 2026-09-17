@@ -158,6 +158,11 @@ namespace fcitx {
         bool cho_hen_gio_             = false; // B33: đang chờ bằng hẹn giờ thay cho sleep_for (app không có ảnh ô)
         int  cho_lan_doi_focus_       = 0;     // B33: số lần hẹn giờ nổ đúng lúc ô đang mất focus
         bool oDaXoaXong() const;
+        // Messenger (facebook.com) vẽ lại ô soạn tin vài ms SAU khi ảnh đã báo xoá xong; chữ giao trước lần
+        // vẽ đó bị đè. Ảnh xoá xong ⇒ hẹn giao sau WaitSurroundingSettleMs (0 = giao ngay như cũ).
+        void                             giaoSauKhiLang(const char* ly_do, bool tu_timer);
+        std::unique_ptr<EventSourceTime> cho_lang_timer_;
+        const char*                      cho_ly_do_lang_ = "";
         void ketThucThayChu(const char* ly_do, bool tu_timer);
 
         /**
