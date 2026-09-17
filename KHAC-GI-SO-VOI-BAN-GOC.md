@@ -462,8 +462,9 @@ GNOME gốc Fedora/Arch; GNOME Wayland; tiện ích làm thanh trong suốt khá
 sai khác thì Lotus lặng lẽ quay về Preedit. Trong `lotus-app-rules.conf` dùng số `3`.
 
 **Kiểu gõ chính là Telex** (`InputMethod=Telex` trong `lotus.conf`), trên cả hai máy. Mọi số đo trong
-tệp này đều gõ Telex. Có lỗi chỉ lộ rõ với Telex, vì dấu gõ sau chữ nên phải thay nhiều ký tự một lúc
-(ví dụ LibreOffice ở nhóm E; tác giả gốc dùng VNI và nói ở #162 là ít gặp). VNI chưa kiểm.
+tệp này đều gõ Telex. Kiểu gõ ảnh hưởng tới lỗi: Telex bỏ dấu sau cả chữ nên hay phải thay nhiều ký tự một lúc, đúng
+trường hợp LibreOffice ở nhóm E sai. Tác giả gốc dùng VNI, và ở #162 nói nhờ vậy ít gặp lỗi của chế độ
+Surrounding Text. VNI chưa kiểm trên bản này.
 
 **Dự định:** gộp ba chế độ uinput (`Uinput (Smooth)`, `Uinput (Super Smooth)`, `Uinput (Slow)`)
 thành một chế độ uinput duy nhất, lấy Super Smooth làm gốc. Chưa làm, chưa có kế hoạch kỹ thuật.
