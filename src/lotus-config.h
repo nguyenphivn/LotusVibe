@@ -245,6 +245,7 @@ namespace fcitx {
         Option<int>  waitSurroundingShortMs{this, "WaitSurroundingShortMs", _("Experiment: shorter timeout (ms) used after two consecutive timeouts without a matching event"), 40};
         Option<int>  waitSurroundingProbeEvery{this, "WaitSurroundingProbeEvery",
                                                _("Experiment: when the app's snapshot is frozen during deletion, stop waiting and re-probe once every N replacements"), 4};
+        Option<int>  waitSurroundingSettleMs{this, "WaitSurroundingSettleMs", _("Experiment: extra ms to wait after the deletion shows done"), 0};
         Option<int>  waitSurroundingMinPerKeyMs{this, "WaitSurroundingMinPerKeyMs",
                                                 _("Experiment: a snapshot identical to the one at send time counts as done only after this many ms per backspace"), 8};
         Option<int>  surrDeleteSleepMs{this, "SurrDeleteSleepMs", _("Experiment: ms per deleted char to sleep after deleteSurroundingText"), 4};

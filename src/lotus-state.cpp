@@ -566,6 +566,28 @@ namespace fcitx {
         ketThucThayChu("mat tieu diem", false);
     }
 
+    void LotusState::giaoSauKhiLang(const char* ly_do, bool tu_timer) {
+        const int lang_ms = engine_->config().waitSurroundingSettleMs.value();
+        if (lang_ms <= 0) {
+            ketThucThayChu(ly_do, tu_timer);
+            return;
+        }
+        // Dùng lại đúng trạng thái "chờ hẹn giờ" (B33): phím tới giữa chừng chờ nốt rồi giao, mất tiêu điểm
+        // thì để đồng hồ tự giao, người nghe ảnh và đồng hồ hạn chờ im lặng vì cho_hen_gio_.
+        cho_dang_cho_      = true; // nhánh "ngay" tới đây khi chưa bật cờ chờ
+        cho_hen_gio_       = true;
+        cho_lan_doi_focus_ = 0;
+        cho_ly_do_lang_    = ly_do;
+        cho_moc_giao_      = ::fcitx::now(CLOCK_MONOTONIC) + (static_cast<uint64_t>(lang_ms) * 1000ULL);
+        cho_lang_timer_    = engine_->instance()->eventLoop().addTimeEvent(CLOCK_MONOTONIC, cho_moc_giao_, 1000, [this](EventSourceTime*, uint64_t) {
+            if (!cho_dang_cho_ || !cho_hen_gio_ || !is_deleting_.load()) {
+                return false;
+            }
+            ketThucThayChu(cho_ly_do_lang_, false);
+            return false;
+        });
+    }
+
     void LotusState::ketThucThayChu(const char* ly_do, bool tu_timer) {
         const auto tre_ms = (::fcitx::now(CLOCK_MONOTONIC) - cho_surr_bat_dau_) / 1000;
         LOTUS_INFO("Surr wait " + std::string(ly_do) + " after " + std::to_string(tre_ms) + " ms");
@@ -643,7 +665,7 @@ namespace fcitx {
                 // v6: sau một lần quá hạn thì Firefox đang tụt lại, ảnh không đáng tin → bỏ kiểm ngay
                 if (cho_anh_tin_cay_ && oDaXoaXong()) {
                     LOTUS_INFO("Skip retry");
-                    ketThucThayChu("ngay", false);
+                    giaoSauKhiLang("ngay", false);
                     return true;
                 }
                 auto* instance = engine_->instance();
@@ -653,7 +675,7 @@ namespace fcitx {
                 cho_surr_watcher_.reset(); // ngoài dispatch của nó, an toàn
                 cho_surr_watcher_ = instance->watchEvent(EventType::InputContextSurroundingTextUpdated, EventWatcherPhase::Default, [this](Event& e) {
                     auto& ice = static_cast<InputContextEvent&>(e);
-                    if (!cho_dang_cho_ || ice.inputContext() != ic_ || !is_deleting_.load()) {
+                    if (!cho_dang_cho_ || cho_hen_gio_ || ice.inputContext() != ic_ || !is_deleting_.load()) {
                         return;
                     }
                     // v9: vừa quá hạn = app đang tụt, ảnh nó báo là bộ đệm cập nhật trễ ('trươnờ': tin
@@ -672,7 +694,7 @@ namespace fcitx {
                     if (!cho_anh_tin_cay_ && da_cho_us < toi_thieu_us) {
                         // v9: vừa quá hạn xong thì tin tới sớm là bộ đệm cũ bắt kịp, không tin.
                     } else if (oDaXoaXong()) {
-                        ketThucThayChu("su kien", false);
+                        giaoSauKhiLang("su kien", false);
                     }
                     // Ảnh chưa khớp thì im lặng chờ tiếp: mọi thứ đáng in ở đây đều là chữ
                     // người dùng vừa gõ, không đưa vào nhật ký.
@@ -691,13 +713,13 @@ namespace fcitx {
                     static_cast<uint64_t>(engine_->config().waitSurroundingMinPerKeyMs.value()) * static_cast<uint64_t>(std::max(expected_backspaces_, 1)) * 1000ULL;
                 const auto moc_dau = nguong < han ? cho_surr_bat_dau_ + nguong : cho_surr_bat_dau_ + han;
                 cho_surr_timer_    = instance->eventLoop().addTimeEvent(CLOCK_MONOTONIC, moc_dau, 1000, [this, han](EventSourceTime* t, uint64_t) {
-                    if (!cho_dang_cho_ || !is_deleting_.load()) {
+                    if (!cho_dang_cho_ || cho_hen_gio_ || !is_deleting_.load()) {
                         return false;
                     }
                     const auto da_cho = ::fcitx::now(CLOCK_MONOTONIC) - cho_surr_bat_dau_;
                     if (da_cho + 1000 < han) {
                         if (oDaXoaXong()) {
-                            ketThucThayChu("nguong", true);
+                            giaoSauKhiLang("nguong", true);
                             return false;
                         }
                         t->setTime(cho_surr_bat_dau_ + han);
