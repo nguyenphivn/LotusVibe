@@ -1,16 +1,20 @@
-# fcitx5-lotus — bản fork dùng hằng ngày
+# LotusVibe — bản fork fcitx5-lotus dùng hằng ngày
 
 Đây là bản fork của [fcitx5-lotus](https://github.com/LotusInputMethod/fcitx5-lotus), bộ gõ tiếng
 Việt cho fcitx5, chạy hằng ngày trên CachyOS + KDE Plasma Wayland và trên một iMac Ubuntu 24.04 +
 GNOME X11.
 
+Tên LotusVibe nghĩa là bản này **chỉ sửa bằng vibecode**. Đổi tên kho ngày 17/09/2026 (tên cũ
+`nguyenphivn/fcitx5-lotus`, link cũ vẫn tự chuyển về đây). Bên trong mã vẫn giữ tên `lotus` như bản
+gốc, nên cài vào máy là thay cho bản Lotus gốc, không cài song song được.
+
 Trang này chỉ ghi **những gì khác với bản gốc**. Hướng dẫn dùng bộ gõ nói chung xem
-[README của bản gốc](https://github.com/nguyenphivn/fcitx5-lotus/blob/ban-dung/README.md) hoặc
+[README của bản gốc](https://github.com/nguyenphivn/LotusVibe/blob/ban-dung/README.md) hoặc
 [trang chủ Lotus](https://lotusinputmethod.github.io/).
 
 - **Nhánh để dùng:** `ban-dung` (nhánh mặc định) = `dev` của bản gốc + 24 miếng vá.
 - **Chi tiết từng vá, số đo, tác giả gốc trả lời ra sao, và hướng dẫn cài:**
-  [KHAC-GI-SO-VOI-BAN-GOC.md](https://github.com/nguyenphivn/fcitx5-lotus/blob/ban-dung/KHAC-GI-SO-VOI-BAN-GOC.md)
+  [KHAC-GI-SO-VOI-BAN-GOC.md](https://github.com/nguyenphivn/LotusVibe/blob/ban-dung/KHAC-GI-SO-VOI-BAN-GOC.md)
 
 ## Nên dùng chế độ nào
 
@@ -112,5 +116,5 @@ Cả hai nằm ở [PR #492](https://github.com/LotusInputMethod/fcitx5-lotus/pu
 ## Cài
 
 Làm theo mục
-[Cài sang máy khác](https://github.com/nguyenphivn/fcitx5-lotus/blob/ban-dung/KHAC-GI-SO-VOI-BAN-GOC.md#cài-sang-máy-khác).
+[Cài sang máy khác](https://github.com/nguyenphivn/LotusVibe/blob/ban-dung/KHAC-GI-SO-VOI-BAN-GOC.md#cài-sang-máy-khác).
 Nhớ gỡ bản Lotus đóng gói sẵn trước, và cài vào `/usr`.

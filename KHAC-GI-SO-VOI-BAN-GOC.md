@@ -1,6 +1,6 @@
-# Bản này khác gì so với Lotus gốc
+# LotusVibe khác gì so với Lotus gốc
 
-Đây là bản fork của [fcitx5-lotus](https://github.com/LotusInputMethod/fcitx5-lotus), dùng hằng
+LotusVibe là bản fork của [fcitx5-lotus](https://github.com/LotusInputMethod/fcitx5-lotus), dùng hằng
 ngày trên hai máy: CachyOS + KDE Plasma Wayland, và một iMac chạy Ubuntu 24.04 + GNOME X11 (máy tính
 tiền kiêm máy chạy CI). Tệp này ghi lại **từng miếng vá**: vá gì, vì sao, đã
 gửi ngược lên chưa, và tác giả trả lời ra sao.
@@ -10,8 +10,8 @@ gửi ngược lên chưa, và tác giả trả lời ra sao.
 **Nhánh `ban-dung`.** Đó là nhánh duy nhất nên lấy để dùng hoặc để thử trên máy khác.
 
 ```
-git clone https://github.com/nguyenphivn/fcitx5-lotus.git
-cd fcitx5-lotus
+git clone https://github.com/nguyenphivn/LotusVibe.git
+cd LotusVibe
 git checkout ban-dung
 ```
 
@@ -53,8 +53,8 @@ sudo pacman -S --needed cmake extra-cmake-modules gcc go git python make pkgconf
 `--recurse-submodules`, vì lõi bộ gõ nằm ở kho con `bamboo-core`.
 
 ```
-git clone --recurse-submodules -b ban-dung https://github.com/nguyenphivn/fcitx5-lotus.git
-cd fcitx5-lotus
+git clone --recurse-submodules -b ban-dung https://github.com/nguyenphivn/LotusVibe.git
+cd LotusVibe
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=/usr/lib
 cmake --build build -j8
 sudo cmake --install build
@@ -98,7 +98,7 @@ Máy gốc còn bật `WaitSurroundingEvent=True` trong `~/.config/fcitx5/conf/l
 mặc định tắt). Vá thanh địa chỉ không phụ thuộc tuỳ chọn này, nhưng mọi lượt đo trên máy gốc đều
 chạy khi nó bật.
 
-**Cập nhật bản mới về sau:** trong thư mục `fcitx5-lotus`, chạy `git pull --recurse-submodules`,
+**Cập nhật bản mới về sau:** trong thư mục `LotusVibe`, chạy `git pull --recurse-submodules`,
 lặp lại bước 3, rồi `sudo systemctl restart fcitx5-lotus-server@$(whoami).service` và khởi động lại
 fcitx5.
 
@@ -518,7 +518,8 @@ dựng mới khớp 0 dòng khác với mã máy chủ đang cài và mô-đun �
 
 Mã băm commit trong tệp này đổi theo mỗi lần gom; tìm theo tiêu đề commit nếu không khớp.
 
-**Không đổi tên bản fork.** Chữ `lotus` nằm 1592 chỗ ở 95 tệp, và 4 tệp tác giả sửa nhiều nhất
+**Không đổi tên trong mã.** Ngày 17/09/2026 chỉ đổi tên KHO trên GitHub thành `LotusVibe` (link cũ tự
+chuyển); mọi tên bên trong mã, gói, dịch vụ vẫn là `lotus`. Chữ `lotus` nằm 1592 chỗ ở 95 tệp, và 4 tệp tác giả sửa nhiều nhất
 chính là 4 tệp việc đổi tên phải cày nát, nên đổi tên là tự chuốc xung đột mỗi lần cập nhật.
 Gói Nix dùng `--replace-fail` nên đổi tên là gãy bản dựng chứ không phải cảnh báo. Tính lại khi
 số vá bị từ chối vượt 8 đến 10 cái.
