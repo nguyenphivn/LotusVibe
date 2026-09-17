@@ -61,6 +61,8 @@ add_lotus_headless_test(smooth_buffered_key_replay
     smooth-buffered-key-replay.cpp "integration;smooth")
 add_lotus_headless_test(held_key_repeat
     held-key-repeat.cpp "integration;smooth")
+add_lotus_headless_test(super_smooth_half_updated_snapshot
+    super-smooth-half-updated-snapshot.cpp "integration;smooth")
 add_lotus_headless_test(modifier_key_bypasses_surrounding_text
     modifier-key-bypasses-surrounding-text.cpp "integration;surrounding")
 add_lotus_headless_test(emoji_history_page_navigation
