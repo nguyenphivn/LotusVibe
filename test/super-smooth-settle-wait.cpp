@@ -156,8 +156,7 @@ int main() {
     setSnapshot(*context, "ti\n\n", 2);
     pumpEventLoop(testInstance.instance, 15);
     if (!context->commits().empty()) {
-        reportFailure("no commit within WaitSurroundingSettleMs=40 after the snapshot shows the deletion done", "commits=(none)",
-                      "commits=" + joinCommits(*context));
+        reportFailure("no commit within WaitSurroundingSettleMs=40 after the snapshot shows the deletion done", "commits=(none)", "commits=" + joinCommits(*context));
         return 1;
     }
 
