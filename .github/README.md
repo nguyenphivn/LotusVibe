@@ -93,7 +93,9 @@ Nói cho đúng:
   `WaitSurroundingEvent=True`, `WaitSurroundingSettleMs=60` và `WaitSurroundingSettleFirstWordMs=60`;
   chỉ ô soạn tin Messenger phải chờ, ô khác giao ngay. Đo trên Edge bằng máy gõ tự động lúc máy bận:
   chờ 20 ms thì từ đầu tiên sai 30/156 và câu đầy đủ sai 8/50; chờ 60 ms thì 0/100 từ đầu, 0/50 câu.
-  Chưa đo Firefox. Đã báo cách khắc phục ở #267, chưa gửi mã.
+  Chưa đo Firefox. Đã báo cách khắc phục ở #267, chưa gửi mã. **Đây là cách chữa tạm, không hết lỗi
+  100%:** nhiều khả năng lỗi nằm ở phía Facebook (ô soạn tin nuốt chữ tới lúc nó đang vẽ lại, không báo
+  gì), nên bộ gõ chỉ né được bằng cách chờ. Máy càng bận thì càng dễ lọt chữ.
 - **Chờ 4 ms mỗi phím xoá thay vì 2** ở Smooth và Super Smooth. Máy tải nặng: 2 ms đúng 39–46/60
   câu, 4 ms đúng 58–60/60. Máy rảnh không khác.
 

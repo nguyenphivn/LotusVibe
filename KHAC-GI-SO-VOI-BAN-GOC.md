@@ -422,6 +422,11 @@ tiền kiêm chạy CI nên tải nặng là chuyện có thật. Đã ghi trong
 
 ### Messenger trên Facebook mất chữ ở chế độ uinput (`60144f9`, `ab5b307`, vá bổ sung 19/09 ×2)
 
+> **Cách chữa tạm, không hết lỗi 100% (chủ máy chốt 19/09).** Nguyên nhân (1) và (3) là lỗi kiểm "đã xoá
+> xong" của bộ gõ, đã vá dứt điểm. Nguyên nhân (2) và (4) nhiều khả năng nằm ở phía Facebook: ô soạn tin
+> nuốt chữ tới lúc nó đang vẽ lại mà không phát tín hiệu nào, nên bộ gõ chỉ né được bằng cách chờ. Chờ 60 ms
+> chưa thấy sai trong các lượt đo, nhưng máy bận hơn hoặc Facebook đổi mã thì vẫn có thể lọt chữ.
+
 **Triệu chứng:** gõ Telex trong ô soạn tin Messenger trên facebook.com, Edge, KDE Wayland, Super Smooth:
 `tieengs vieetj` ra `iếngiệt`. Chữ có dấu vẫn đúng nhưng mất chữ phía trước (`t`, dấu cách, `v`). Lark
 và ô soạn thảo Lexical trơn (cùng bộ soạn thảo Messenger dùng) không bị.
