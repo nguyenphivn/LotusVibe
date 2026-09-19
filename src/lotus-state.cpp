@@ -538,12 +538,19 @@ namespace fcitx {
         // xoá sau ('tie\n\n' con trỏ 2, rồi mới 'ti\n\n'). Chỉ nhìn phần trước con trỏ thì ảnh nửa vời
         // trông như đã xoá xong; giao chữ lúc đó bị trang vứt, phím xoá lượt sau ăn vào chữ thật
         // ('tieengs vieetj' → 'iếngiệt', đo 17/09: 3/3 lần giao trên ảnh nửa vời mất chữ, 3/3 trên ảnh
-        // khớp vào đủ). Chữ ngay sau con trỏ còn là chữ đầu của phần cần xoá ⇒ ảnh chưa xong, chờ tiếp.
+        // khớp vào đủ). Xoá từ hai chữ trở lên thì con trỏ còn có thể đứng GIỮA phần cần xoá ('do\n\n' con
+        // trỏ 1 khi xoá 'do'; log 19/09: 4/4 lần giao trên ảnh đó mất chữ, vì chỉ so chữ đầu). Trước con
+        // trỏ là phần đầu + k chữ đầu của phần cần xoá, sau con trỏ là chữ thứ k ⇒ ảnh chưa xong, chờ tiếp.
         if (!cho_deleted_.empty() && it != t.end()) {
-            const auto hetChuSau = utf8::nextChar(it);
-            const auto hetChuXoa = utf8::nextChar(cho_deleted_.begin());
-            if (std::string(it, hetChuSau) == std::string(cho_deleted_.begin(), hetChuXoa)) {
-                return false;
+            const std::string chuSau(it, utf8::nextChar(it));
+            std::string       daQua = cho_prefix_;
+            for (auto d = cho_deleted_.begin(); d != cho_deleted_.end();) {
+                const auto hetD = utf8::nextChar(d);
+                if (chuSau == std::string(d, hetD) && endsWith(before, daQua)) {
+                    return false;
+                }
+                daQua.append(d, hetD);
+                d = hetD;
             }
         }
         return endsWith(before, cho_prefix_);
@@ -566,9 +573,29 @@ namespace fcitx {
         ketThucThayChu("mat tieu diem", false);
     }
 
+    namespace {
+        // Ô soạn tin Messenger (Edge) báo "\n\n" ngay sau con trỏ; xoá trống thì cả ảnh chỉ còn "\n". Log 17/09:
+        // 39/39 ảnh có "\n\n" đều đúng con trỏ đứng trước hai dấu xuống dòng cuối. Lỗi trang vẽ lại đè chữ chỉ
+        // đo được ở ô này, nên chỉ ô này chờ lắng; ô khác giao ngay như cũ.
+        bool giongOSoanTinMessenger(const SurroundingText& s) {
+            if (!s.isValid()) {
+                return false;
+            }
+            const std::string& t = s.text();
+            if (t == "\n") {
+                return true;
+            }
+            auto it = t.begin();
+            for (unsigned int i = 0; i < s.cursor() && it != t.end(); ++i) {
+                it = utf8::nextChar(it);
+            }
+            return std::string(it, t.end()) == "\n\n";
+        }
+    } // namespace
+
     void LotusState::giaoSauKhiLang(const char* ly_do, bool tu_timer) {
         const int lang_ms = engine_->config().waitSurroundingSettleMs.value();
-        if (lang_ms <= 0) {
+        if (lang_ms <= 0 || !giongOSoanTinMessenger(ic_->surroundingText())) {
             ketThucThayChu(ly_do, tu_timer);
             return;
         }

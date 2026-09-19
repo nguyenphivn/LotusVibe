@@ -98,7 +98,7 @@ Máy gốc còn bật `WaitSurroundingEvent=True` trong `~/.config/fcitx5/conf/l
 mặc định tắt). Vá thanh địa chỉ không phụ thuộc tuỳ chọn này, nhưng mọi lượt đo trên máy gốc đều
 chạy khi nó bật.
 
-Máy Fedora còn đặt `WaitSurroundingSettleMs=40` cùng tệp đó, để gõ được Messenger trên Facebook
+Máy Fedora còn đặt `WaitSurroundingSettleMs=20` cùng tệp đó, để gõ được Messenger trên Facebook
 (vá nhóm E, mặc định 0). Tuỳ chọn này chỉ có tác dụng khi `WaitSurroundingEvent=True`.
 
 **Cập nhật bản mới về sau:** trong thư mục `LotusVibe`, chạy `git pull --recurse-submodules`,
@@ -420,7 +420,7 @@ với tính năng bấm chuột ngắt từ thì cú bấm bị xử lý trễ.
 (6 lõi bận ở `nice 15`, load khoảng 10): 2 ms đúng 39–46/60, 4 ms đúng 58–60/60, 8 ms 60/60. Máy tính
 tiền kiêm chạy CI nên tải nặng là chuyện có thật. Đã ghi trong bình luận ở issue #506.
 
-### Messenger trên Facebook mất chữ ở chế độ uinput (`60144f9`, `ab5b307`)
+### Messenger trên Facebook mất chữ ở chế độ uinput (`60144f9`, `ab5b307`, vá bổ sung 19/09)
 
 **Triệu chứng:** gõ Telex trong ô soạn tin Messenger trên facebook.com, Edge, KDE Wayland, Super Smooth:
 `tieengs vieetj` ra `iếngiệt`. Chữ có dấu vẫn đúng nhưng mất chữ phía trước (`t`, dấu cách, `v`). Lark
@@ -451,48 +451,63 @@ bỏ chờ retry), nên nhiều khả năng lỗi dễ lộ hơn. **Chưa đo** 
    vào đủ. Lần vẽ lại này không phát sự kiện surrounding text nào, nên chỉ chờ được theo thời gian. Khớp
    với nhận xét của kimxuanhong ở #267 ("timing chưa đúng, xoá xong cần đợi thêm rồi mới commit").
 
+3. **Con trỏ nằm GIỮA phần cần xoá (nguyên nhân chính, tìm ra 19/09).** Vá (1) chỉ so chữ ngay sau con
+   trỏ với chữ ĐẦU của phần cần xoá. Thay từ hai chữ trở lên (gõ `đ` là xoá cả từ: `do` → `đo`) thì
+   giữa hai nhịp Edge báo `do\n\n` con trỏ 1, tức con trỏ đứng giữa `d` và `o`, chữ chưa xoá. Ảnh đó
+   lọt qua vá (1), bộ gõ giao chữ sau 3–10 ms và mất chữ. Log 19/09 (bản khoanh vùng, chờ 80 ms): 4/4
+   lần mất chữ đều là ảnh này, không lần nào kịp chờ. Câu thử `tieengs vieetj` chỉ thay 1–2 chữ nên
+   ít gặp; câu nhiều chữ `đ` gặp ngay.
+
 **Vá:**
 
 - `60144f9`: chữ ngay sau con trỏ vẫn là chữ đầu của phần cần xoá thì ảnh chưa xong, chờ tiếp.
 - `ab5b307`: tuỳ chọn `WaitSurroundingSettleMs`. Ảnh báo xoá xong thì hẹn giao chữ sau N ms, dùng lại
   đúng trạng thái chờ hẹn giờ có sẵn (phím chen vào thì chờ nốt rồi giao). Mặc định 0, hành vi không đổi.
+- Vá 19/09: (a) mở rộng vá (1) ra mọi vị trí con trỏ bên trong phần cần xoá: trước con trỏ là phần đầu
+  cộng k chữ đầu của phần cần xoá, sau con trỏ là chữ thứ k ⇒ chưa xong. (b) Chỉ chờ lắng ở ô có hình
+  ô soạn tin Messenger: sau con trỏ đúng `\n\n`, hoặc cả ảnh chỉ là `\n` (ô vừa bị xoá trống). Ô khác
+  giao ngay như trước khi có `ab5b307`. Khoanh theo hình ảnh chứ không theo tên chương trình, để
+  Messenger trong Chrome cũng được chữa còn Lark mở trong Edge không phải chờ. Khớp nhầm thì chỉ chậm
+  thêm, không sai chữ.
 
-**Đo:** máy Fedora 44, KDE Wayland, Edge 153 flatpak, Super Smooth, `WaitSurroundingEvent=True`.
+**Đo:** máy Fedora 44, KDE Wayland, Edge 153 flatpak, Super Smooth, `WaitSurroundingEvent=True`, chủ máy gõ
+tay. Các dòng 17/09 đo trên bản CÒN lỗi (3), nên con số mức chờ ở đó không đáng tin:
 
-| Ô | Trước | Sau |
+| Ô | Bản | Kết quả |
 | --- | --- | --- |
-| Messenger, chủ máy gõ tay, chỉ vá (1) | mất chữ | vẫn mất chữ |
-| Messenger, bản dựng có log đo, vá (1) + `WaitSurroundingSettleMs=15` | mất chữ | gõ đúng; 11 lần giao theo sự kiện ở mốc 20–41 ms |
-| Messenger, gói RPM không log, `WaitSurroundingSettleMs=15` | mất chữ | vẫn mất chữ |
-| Messenger, gói RPM không log, `WaitSurroundingSettleMs=25` | mất chữ | chủ máy ước đúng khoảng 9/10 dòng |
-| Messenger, gói RPM không log, `WaitSurroundingSettleMs=30` | mất chữ | chủ máy thấy đúng (chưa đếm từng dòng) |
-| Messenger, gói RPM không log, `WaitSurroundingSettleMs=40` | mất chữ | gõ đúng |
-| Ô Lexical trơn, bàn phím ảo, 10 lượt, 50 ms/phím, chỉ vá (1) | chưa đo | 10/10 |
+| Messenger, chỉ vá (1) | 17/09 | vẫn mất chữ |
+| Messenger, `WaitSurroundingSettleMs=15`, bản có log đo | 17/09, còn lỗi (3) | gõ đúng một lượt |
+| Messenger, `=15` / `=25` / `=40`, gói RPM | 17/09, còn lỗi (3) | mất chữ / sai ~1/10 / đúng, sai ~1/50 lúc máy bận |
+| Messenger, khoanh vùng, `=80` | 19/09, còn lỗi (3) | 4 lần giao ở mốc 3–10 ms, mất chữ |
+| Messenger, vá 19/09, `=0` | 19/09 | mất chữ; giao ở mốc 4–17 ms |
+| Messenger, vá 19/09, `=4` | 19/09 | mất ngay chữ đầu; giao ở mốc 9–22 ms |
+| Messenger, vá 19/09, `=20` (hai lượt, có lúc máy bận, gõ nhanh) | 19/09 | 350 lần thay chữ, 0 lần giao sớm, không thấy dòng sai; giao ở mốc 24–43 ms |
+| Ô thường (không có `\n\n`), vá 19/09, `=20` | 19/09 | giao khi ô báo xoá xong, không chờ thêm |
+| Ô Lexical trơn, bàn phím ảo, 10 lượt, 50 ms/phím, chỉ vá (1) | 17/09 | 10/10 |
 
-ctest 16/16. Ba bài mới: ảnh nửa vời, chờ sau khi ảnh xong, và chờ ở nhánh `ngay`. Gỡ dòng
-`cho_dang_cho_ = true` trong `giaoSauKhiLang` thì đỏ đúng bài `super_smooth_settle_wait_immediate`.
+**Mức chờ chọn 20 ms:** 0 và 4 ms mất chữ, nên nguyên nhân (2) có thật. Ranh giới quanh mốc 17 ms từ lúc
+bắn phím xoá (17/09: giao trước 12 ms mất, từ 17 ms vào). 20 ms đẩy lần giao sớm nhất lên 24 ms. Hạ tiếp
+chỉ lợi vài ms mỗi lần thay chữ, mà chỉ ô Messenger phải chờ.
 
-**Mức chờ chọn 40 ms (dò 17/09):** 15 ms chỉ đúng trên bản dựng có log đo. Nhiều khả năng mỗi dòng log tốn thời
-gian nên chữ thật ra giao muộn hơn 15 ms (chưa đo riêng để chứng minh) (mốc 20–41 ms ở bảng trên); gói RPM không log thì 15 ms lại mất chữ.
-Chủ máy gõ tay dò trên gói RPM: 25 ms còn sai, 30 ms đúng. Chọn 40 ms = mức thấp nhất đúng cộng 10 ms dư,
-vì 25 ms còn sai lẻ tẻ (ranh giới sát) và mỗi mức mới thử một lượt.
+**Bẫy đo riêng của vá này:** tăng mức chờ mỗi lần thấy lỗi thì lần nào cũng "đỡ hơn", vì chờ lâu cho Edge
+thêm thời gian báo ảnh đúng nên ít gặp lỗi (3). Đó là che triệu chứng: ở 80 ms vẫn mất chữ vì bộ gõ không
+chờ chút nào. Muốn biết mức chờ đúng phải soi ẢNH lúc giao, không nhìn số dòng sai. Giả thuyết 17/09 "log
+làm chậm nên 15 ms trên bản có log mới đúng" không cần nữa: lỗi (3) ra ngẫu nhiên theo nhịp Edge.
 
-Mức chờ áp cho mọi ô báo được nội dung (không riêng Facebook), chỉ ở lần thay chữ có phím xoá; phím gõ
-chen vào lúc chờ được giữ lại rồi đưa ra sau.
+ctest 19/19. Bài mới 19/09: `super_smooth_half_updated_mid_word` (đỏ trên mã cũ ở đúng bước ảnh `d|o`),
+`super_smooth_settle_plain_field` (ô thường phải giao trong 15 ms; đỏ khi còn chờ mọi ô),
+`super_smooth_settle_empty_composer` (ô trống `\n` vẫn chờ; đỏ đúng bài này khi gỡ dòng nhận `\n`).
 
-**Bẫy đo riêng của vá này:** đo mức chờ trên bản dựng có log thì con số ra thấp hơn thật. Dò mức chờ phải
-dùng bản không log.
-
-**Còn hở:** mức 30 ms chưa đếm đủ 10 dòng, máy tải nặng chưa đo. Chưa đo ô Lexical trơn khi bật
-mức chờ. Chưa đo trên Firefox, và chưa đo đường `WaitSurroundingEvent=False`. Đường đó chỉ so vị trí con
-trỏ nên có thể mắc đúng lỗi (1).
+**Còn hở:** chưa đo Firefox và Chrome, chưa đo đường `WaitSurroundingEvent=False` (chỉ so vị trí con trỏ nên
+có thể mắc đúng lỗi (1) và (3)). Chưa kiểm ô soạn thảo khác trên Chromium có hình `\n\n` (Gmail, Zalo web)
+để biết có khớp nhầm không.
 
 **Bẫy đo đã gặp:** trang thử đo bằng bàn phím ảo từng cho 0/10 và 1/10 mà không phải lỗi bộ gõ. Cửa sổ
 Edge mới chưa bật Lotus. Trang tự xoá ô nên Lotus còn nhớ từ lượt trước (phải bấm một phím di chuyển con
 trỏ giữa các lượt). Phím Esc làm ô Lexical mất chọn. Bộ đo (trang Lexical tự ghi sự kiện, máy chủ nhỏ,
 kịch bản chỉ gõ khi trang đang được chọn) chưa đưa vào workbench.
 
-**Upstream:** đã báo cách khắc phục ở #267 (17/09, sau đó sửa mức chờ thành 40 ms), chưa gửi mã.
+**Upstream:** đã báo cách khắc phục ở #267 (17/09; cập nhật 19/09: nguyên nhân (3), mức chờ 20 ms), chưa gửi mã.
 
 ### Icon chữ V màu đen trên thanh trên cùng của GNOME
 

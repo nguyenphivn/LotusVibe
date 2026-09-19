@@ -63,10 +63,16 @@ add_lotus_headless_test(held_key_repeat
     held-key-repeat.cpp "integration;smooth")
 add_lotus_headless_test(super_smooth_half_updated_snapshot
     super-smooth-half-updated-snapshot.cpp "integration;smooth")
+add_lotus_headless_test(super_smooth_half_updated_mid_word
+    super-smooth-half-updated-mid-word.cpp "integration;smooth")
 add_lotus_headless_test(super_smooth_settle_wait
     super-smooth-settle-wait.cpp "integration;smooth")
 add_lotus_headless_test(super_smooth_settle_wait_immediate
     super-smooth-settle-wait-immediate.cpp "integration;smooth")
+add_lotus_headless_test(super_smooth_settle_plain_field
+    super-smooth-settle-plain-field.cpp "integration;smooth")
+add_lotus_headless_test(super_smooth_settle_empty_composer
+    super-smooth-settle-empty-composer.cpp "integration;smooth")
 add_lotus_headless_test(modifier_key_bypasses_surrounding_text
     modifier-key-bypasses-surrounding-text.cpp "integration;surrounding")
 add_lotus_headless_test(emoji_history_page_navigation
