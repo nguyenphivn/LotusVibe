@@ -591,13 +591,29 @@ namespace fcitx {
             }
             return std::string(it, t.end()) == "\n\n";
         }
+
+        // Chưa có dấu cách hay xuống dòng trước con trỏ = đang gõ từ đầu tiên của tin nhắn.
+        bool laTuDauTin(const SurroundingText& s) {
+            const std::string& t   = s.text();
+            auto               het = t.begin();
+            for (unsigned int i = 0; i < s.cursor() && het != t.end(); ++i) {
+                het = utf8::nextChar(het);
+            }
+            return std::find_if(t.begin(), het, [](char c) { return c == ' ' || c == '\n'; }) == het;
+        }
     } // namespace
 
     void LotusState::giaoSauKhiLang(const char* ly_do, bool tu_timer) {
-        const int lang_ms = engine_->config().waitSurroundingSettleMs.value();
-        if (lang_ms <= 0 || !giongOSoanTinMessenger(ic_->surroundingText())) {
+        const auto& anh     = ic_->surroundingText();
+        int         lang_ms = engine_->config().waitSurroundingSettleMs.value();
+        if (lang_ms <= 0 || !giongOSoanTinMessenger(anh)) {
             ketThucThayChu(ly_do, tu_timer);
             return;
+        }
+        // Ô soạn tin vừa trống còn đang nạp lại: từ đầu tiên mất 30/156 ở 20 ms, 4/100 ở 40, 0/100 ở 60
+        // (máy gõ tự động 19/09). Chỉ từ đầu chờ lâu, các từ sau giữ mức thường.
+        if (laTuDauTin(anh)) {
+            lang_ms = std::max(lang_ms, engine_->config().waitSurroundingSettleFirstWordMs.value());
         }
         // Dùng lại đúng trạng thái "chờ hẹn giờ" (B33): phím tới giữa chừng chờ nốt rồi giao, mất tiêu điểm
         // thì để đồng hồ tự giao, người nghe ảnh và đồng hồ hạn chờ im lặng vì cho_hen_gio_.

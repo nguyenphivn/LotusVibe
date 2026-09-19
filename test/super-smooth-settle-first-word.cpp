@@ -1,0 +1,186 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// The Messenger composer that has just been emptied is still loading: the first word of a message
+// lost 30 of 156 replacements at a 20 ms settle, 4/100 at 40 and 0/100 at 60 (typing rig 19/09).
+// The first word waits WaitSurroundingSettleFirstWordMs; a later word keeps the ordinary settle.
+#include "lotus-engine.h"
+#include "lotus-utils.h"
+#include "test-input-context.h"
+
+#include <fcitx-utils/utf8.h>
+
+#include <cerrno>
+#include <cstddef>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
+#include <memory>
+#include <string>
+
+#include <poll.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
+
+namespace {
+
+    void reportFailure(const std::string& step, const std::string& expected, const std::string& actual) {
+        std::cerr << "Step: " << step << "\nExpected: " << expected << "\nActual: " << actual << '\n';
+    }
+
+    std::string joinCommits(const TestInputContext& context) {
+        std::string out;
+        for (const auto& commit : context.commits())
+            out += "['" + commit + "']";
+        return out.empty() ? "(none)" : out;
+    }
+
+    class BackspaceListener {
+      public:
+        BackspaceListener() {
+            fd_ = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+            sockaddr_un address{};
+            address.sun_family    = AF_UNIX;
+            const auto socketPath = buildSocketPath("kb_socket");
+            address.sun_path[0]   = '\0';
+            std::memcpy(&address.sun_path[1], socketPath.data(), socketPath.size());
+            const auto length = static_cast<socklen_t>(offsetof(sockaddr_un, sun_path) + socketPath.size() + 1);
+            if (fd_ < 0 || bind(fd_, reinterpret_cast<const sockaddr*>(&address), length) < 0 || listen(fd_, 1) < 0) {
+                reportFailure("bind replacement socket", "bind succeeds", std::strerror(errno));
+                if (fd_ >= 0)
+                    close(fd_);
+                fd_ = -1;
+            }
+        }
+        ~BackspaceListener() {
+            if (client_ >= 0)
+                close(client_);
+            if (fd_ >= 0)
+                close(fd_);
+        }
+        bool valid() const {
+            return fd_ >= 0;
+        }
+        bool receive(int& count) {
+            if (client_ < 0) {
+                pollfd p{fd_, POLLIN, 0};
+                if (poll(&p, 1, 2000) <= 0 || (client_ = accept(fd_, nullptr, nullptr)) < 0) {
+                    reportFailure("accept replacement socket", "connection within 2000 ms", "none");
+                    return false;
+                }
+            }
+            pollfd p{client_, POLLIN, 0};
+            if (poll(&p, 1, 2000) <= 0 || recv(client_, &count, sizeof(count), 0) != sizeof(count)) {
+                reportFailure("receive replacement request", "request within 2000 ms", "none");
+                return false;
+            }
+            return true;
+        }
+
+      private:
+        int fd_     = -1;
+        int client_ = -1;
+    };
+
+    void setSnapshot(TestInputContext& context, const std::string& text, unsigned int cursor) {
+        context.surroundingText().setText(text, cursor, cursor);
+        context.updateSurroundingText();
+    }
+
+    bool type(fcitx::LotusEngine& engine, const fcitx::InputMethodEntry& entry, TestInputContext& context, fcitx::KeySym symbol, bool accepted) {
+        fcitx::KeyEvent event(&context, fcitx::Key(symbol), false);
+        engine.keyEvent(entry, event);
+        if (event.accepted() != accepted) {
+            reportFailure("process key " + std::to_string(symbol), "accepted=" + std::to_string(accepted), "accepted=" + std::to_string(event.accepted()));
+            return false;
+        }
+        return true;
+    }
+
+} // namespace
+
+int main() {
+    const std::string socketNamespace = "test-" + std::to_string(getpid());
+    setenv("LOTUS_SOCKET_NAMESPACE", socketNamespace.c_str(), 1);
+
+    configureTestPaths("fcitx5-lotus-super-smooth-settle-first-word");
+    TestInstance       testInstance;
+    fcitx::LotusEngine engine(&testInstance.instance);
+    fcitx::RawConfig   config;
+    config.setValueByPath("Mode", "Uinput (Super Smooth)");
+    config.setValueByPath("InputMethod", "Telex");
+    config.setValueByPath("WaitSurroundingEvent", "True");
+    config.setValueByPath("WaitSurroundingSettleMs", "20");
+    config.setValueByPath("WaitSurroundingSettleFirstWordMs", "80");
+    engine.setConfig(config);
+    if (engine.config().mode.value() != fcitx::LotusMode::SuperSmooth || !engine.config().waitSurroundingEvent.value()) {
+        reportFailure("configure Super Smooth", "mode=SuperSmooth, WaitSurroundingEvent=True", "config differs");
+        return 1;
+    }
+
+    BackspaceListener listener;
+    if (!listener.valid())
+        return 1;
+    auto context = std::make_unique<TestInputContext>(&testInstance.instance);
+    context->setCapabilityFlags(fcitx::CapabilityFlag::SurroundingText);
+    context->focusIn();
+    fcitx::InputMethodEntry  entry("lotus", "Lotus", "vi", "lotus");
+    fcitx::InputContextEvent focus(context.get(), fcitx::EventType::InputContextFocusIn);
+    engine.activate(entry, focus);
+
+    std::string shown;
+    auto        typeLetters = [&](const std::string& letters) {
+        for (char c : letters) {
+            if (!type(engine, entry, *context, static_cast<fcitx::KeySym>(c), false))
+                return false;
+            shown += c;
+            setSnapshot(*context, shown + "\n\n", static_cast<unsigned int>(fcitx::utf8::length(shown)));
+        }
+        return true;
+    };
+    // Telex "w" on the u just typed: u -> ư, then the page shows the deletion done.
+    auto replaceU = [&](const std::string& name) {
+        if (!type(engine, entry, *context, FcitxKey_w, true))
+            return false;
+        int backspaces = 0;
+        if (!listener.receive(backspaces))
+            return false;
+        if (backspaces != 2) {
+            reportFailure("backspace count for " + name, "2", std::to_string(backspaces));
+            return false;
+        }
+        for (int i = 0; i < backspaces; ++i) {
+            if (!type(engine, entry, *context, FcitxKey_BackSpace, i + 1 == backspaces))
+                return false;
+        }
+        pumpEventLoop(testInstance.instance, 3);
+        shown.pop_back();
+        setSnapshot(*context, shown + "\n\n", static_cast<unsigned int>(fcitx::utf8::length(shown)));
+        return true;
+    };
+
+    setSnapshot(*context, "\n", 0);
+    if (!typeLetters("chu") || !replaceU("first word u -> ư"))
+        return 1;
+    pumpEventLoop(testInstance.instance, 45);
+    if (!context->commits().empty()) {
+        reportFailure("first word: no commit 45 ms after the deletion shows done (first-word settle 80 ms)", "commits=(none)", "commits=" + joinCommits(*context));
+        return 1;
+    }
+    pumpEventLoop(testInstance.instance, 70);
+    if (context->commits() != std::vector<std::string>{"ư"}) {
+        reportFailure("first word: commit once the first-word settle is over", "commits=['ư']", "commits=" + joinCommits(*context));
+        return 1;
+    }
+    shown += "ư";
+    setSnapshot(*context, shown + "\n\n", static_cast<unsigned int>(fcitx::utf8::length(shown)));
+
+    if (!typeLetters(" cu") || !replaceU("second word u -> ư"))
+        return 1;
+    pumpEventLoop(testInstance.instance, 45);
+    if (context->commits() != std::vector<std::string>{"ư", "ư"}) {
+        reportFailure("second word: commit within 45 ms (ordinary settle 20 ms)", "commits=['ư']['ư']", "commits=" + joinCommits(*context));
+        return 1;
+    }
+    return 0;
+}

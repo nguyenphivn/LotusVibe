@@ -246,6 +246,8 @@ namespace fcitx {
         Option<int>  waitSurroundingProbeEvery{this, "WaitSurroundingProbeEvery",
                                                _("Experiment: when the app's snapshot is frozen during deletion, stop waiting and re-probe once every N replacements"), 4};
         Option<int>  waitSurroundingSettleMs{this, "WaitSurroundingSettleMs", _("Experiment: extra ms to wait after the deletion shows done, Messenger composer only"), 0};
+        Option<int>  waitSurroundingSettleFirstWordMs{this, "WaitSurroundingSettleFirstWordMs",
+                                                      _("Experiment: settle wait for the first word of a Messenger message (composer still loading)"), 0};
         Option<int>  waitSurroundingMinPerKeyMs{this, "WaitSurroundingMinPerKeyMs",
                                                 _("Experiment: a snapshot identical to the one at send time counts as done only after this many ms per backspace"), 8};
         Option<int>  surrDeleteSleepMs{this, "SurrDeleteSleepMs", _("Experiment: ms per deleted char to sleep after deleteSurroundingText"), 4};
