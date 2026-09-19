@@ -90,9 +90,10 @@ Nói cho đúng:
   `tieengs vieetj` ra `iếngiệt`). Bốn nguyên nhân: Messenger báo ô đã xoá khi mới xoá một nửa, kể cả
   lúc con trỏ còn đứng giữa chữ đang xoá; Facebook vẽ lại ô soạn tin sau đó, đè mất chữ tới sớm; và
   ô vừa trống còn đang nạp lại nên từ đầu tiên của tin nhắn dễ mất nhất. Cần bật
-  `WaitSurroundingEvent=True`, `WaitSurroundingSettleMs=60` và `WaitSurroundingSettleFirstWordMs=60`;
+  `WaitSurroundingEvent=True`, `WaitSurroundingSettleMs=40` và `WaitSurroundingSettleFirstWordMs=60`;
   chỉ ô soạn tin Messenger phải chờ, ô khác giao ngay. Đo trên Edge bằng máy gõ tự động lúc máy bận:
-  chờ 20 ms thì từ đầu tiên sai 30/156 và câu đầy đủ sai 8/50; chờ 60 ms thì 0/100 từ đầu, 0/50 câu.
+  chờ 20 ms thì từ đầu tiên sai 30/156 và câu đầy đủ sai 8/50; chờ 40 ms giữa câu và 60 ms
+  từ đầu thì 0/100 từ đầu, 1/50 câu (60 ms cho mọi chữ thì 0/50, nhưng chậm hơn ở mọi lần bỏ dấu).
   Chưa đo Firefox. Đã báo cách khắc phục ở #267, chưa gửi mã. **Đây là cách chữa tạm, không hết lỗi
   100%:** nhiều khả năng lỗi nằm ở phía Facebook (ô soạn tin nuốt chữ tới lúc nó đang vẽ lại, không báo
   gì), nên bộ gõ chỉ né được bằng cách chờ. Máy càng bận thì càng dễ lọt chữ.

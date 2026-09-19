@@ -98,7 +98,7 @@ Máy gốc còn bật `WaitSurroundingEvent=True` trong `~/.config/fcitx5/conf/l
 mặc định tắt). Vá thanh địa chỉ không phụ thuộc tuỳ chọn này, nhưng mọi lượt đo trên máy gốc đều
 chạy khi nó bật.
 
-Máy Fedora còn đặt `WaitSurroundingSettleMs=60` và `WaitSurroundingSettleFirstWordMs=60` cùng tệp
+Máy Fedora còn đặt `WaitSurroundingSettleMs=40` và `WaitSurroundingSettleFirstWordMs=60` cùng tệp
 đó, để gõ được Messenger trên Facebook (vá nhóm E, cả hai mặc định 0). Tuỳ chọn này chỉ có tác dụng khi `WaitSurroundingEvent=True`.
 
 **Cập nhật bản mới về sau:** trong thư mục `LotusVibe`, chạy `git pull --recurse-submodules`,
@@ -424,8 +424,9 @@ tiền kiêm chạy CI nên tải nặng là chuyện có thật. Đã ghi trong
 
 > **Cách chữa tạm, không hết lỗi 100% (chủ máy chốt 19/09).** Nguyên nhân (1) và (3) là lỗi kiểm "đã xoá
 > xong" của bộ gõ, đã vá dứt điểm. Nguyên nhân (2) và (4) nhiều khả năng nằm ở phía Facebook: ô soạn tin
-> nuốt chữ tới lúc nó đang vẽ lại mà không phát tín hiệu nào, nên bộ gõ chỉ né được bằng cách chờ. Chờ 60 ms
-> chưa thấy sai trong các lượt đo, nhưng máy bận hơn hoặc Facebook đổi mã thì vẫn có thể lọt chữ.
+> nuốt chữ tới lúc nó đang vẽ lại mà không phát tín hiệu nào, nên bộ gõ chỉ né được bằng cách chờ. Mức chọn
+> (giữa câu 40 ms, từ đầu 60 ms) lúc máy bận còn sai khoảng 1/50 câu; chủ máy chấp nhận phần lọt đó là do
+> các sự kiện của Facebook trong lúc chat, không tránh được, thay vì chờ lâu hơn ở mọi lần bỏ dấu.
 
 **Triệu chứng:** gõ Telex trong ô soạn tin Messenger trên facebook.com, Edge, KDE Wayland, Super Smooth:
 `tieengs vieetj` ra `iếngiệt`. Chữ có dấu vẫn đúng nhưng mất chữ phía trước (`t`, dấu cách, `v`). Lark
@@ -518,12 +519,13 @@ chỉ gõ một từ đầu tiên.
 "Máy bận": tải trung bình 5–8 (một tiến trình `gh` ăn 350% CPU, máy chạy CI, máy chủ Next.js). Cùng mức 20 ms,
 máy rảnh mất 1/1320 lần thay chữ, máy bận 8/50 câu: chữ giữa câu mất hay không tuỳ máy có bận không.
 
-**Mức chờ chọn 60 ms cho mọi chữ (chủ máy chốt 19/09):** 0 và 4 ms mất chữ, nên nguyên nhân (2) có thật. Ranh giới quanh mốc 17 ms từ lúc
+**Mức chờ chọn: giữa câu 40 ms, từ đầu 60 ms (chủ máy chốt 19/09):** 0 và 4 ms mất chữ, nên nguyên nhân (2) có thật. Ranh giới quanh mốc 17 ms từ lúc
 bắn phím xoá (17/09: giao trước 12 ms mất, từ 17 ms vào). 20 ms đẩy lần giao sớm nhất lên 24 ms. Hạ tiếp
 chỉ lợi vài ms mỗi lần thay chữ, mà chỉ ô Messenger phải chờ. Từ đầu tiên cần 60 ms (40 ms còn sai 4/100).
-Giữa câu 20 ms đủ lúc máy rảnh nhưng máy bận thì sai 8/50 câu, 40 ms còn 1/50, 60 ms 0/50; chủ máy chọn
-không mất chữ hơn là nhanh thêm 40 ms ở ô Messenger. `WaitSurroundingSettleFirstWordMs` vẫn giữ: ai hạ
-mức giữa câu xuống thì từ đầu vẫn chờ đủ.
+Giữa câu 20 ms đủ lúc máy rảnh nhưng máy bận thì sai 8/50 câu, 40 ms còn 1/50, 60 ms 0/50. Chủ máy
+chọn 40 ms: phần còn lọt coi là do sự kiện của Facebook trong lúc chat, không tránh được; chờ 60 ms ở mọi
+lần bỏ dấu không đáng. Từ đầu giữ 60 ms nhờ `WaitSurroundingSettleFirstWordMs`, vì ở 40 ms từ đầu còn
+sai 4/100.
 
 **Bẫy thước đo phụ:** đếm "chữ có hiện trong ảnh trước lần thay kế tiếp không" chỉ đúng khi mức chờ ngắn.
 Ở 60 ms phím kế tiếp thường tới trong lúc chờ nên ảnh xác nhận ra sau mốc đó, thước báo mất 36/660 lần
@@ -549,7 +551,7 @@ Edge mới chưa bật Lotus. Trang tự xoá ô nên Lotus còn nhớ từ lư�
 trỏ giữa các lượt). Phím Esc làm ô Lexical mất chọn. Bộ đo (trang Lexical tự ghi sự kiện, máy chủ nhỏ,
 kịch bản chỉ gõ khi trang đang được chọn) chưa đưa vào workbench.
 
-**Upstream:** đã báo cách khắc phục ở #267 (17/09; cập nhật 19/09: nguyên nhân (3) và (4), mức chờ 60 ms), chưa gửi mã.
+**Upstream:** đã báo cách khắc phục ở #267 (17/09; cập nhật 19/09: nguyên nhân (3) và (4), đề xuất 60 ms; fork tự dùng 40 ms giữa câu, 60 ms từ đầu), chưa gửi mã.
 
 ### Icon chữ V màu đen trên thanh trên cùng của GNOME
 
