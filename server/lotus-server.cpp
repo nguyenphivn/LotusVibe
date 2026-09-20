@@ -15,7 +15,7 @@
 #include <csignal>
 #include <cstddef>
 
-#include <limits.h>
+#include <climits> // IWYU pragma: keep
 #include <sched.h>
 #include <sys/un.h>
 #include <unistd.h>
