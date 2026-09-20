@@ -430,7 +430,7 @@ tiền kiêm chạy CI nên tải nặng là chuyện có thật. Đã ghi trong
 > 0 lần mất chữ, xác nhận về sau 3–20 ms (trung vị 6), không lần nào chạm hạn. Đoạn dưới nói về đường
 > cũ (`WaitSurroundingSettleMs`), vẫn giữ làm đường lùi.
 >
-> **Cách chữa tạm, không hết lỗi 100% (chủ máy chốt 19/09).** Nguyên nhân (1) và (3) là lỗi kiểm "đã xoá
+> **Về ĐƯỜNG LÙI (chờ theo đồng hồ) — cách chữa tạm, không hết lỗi 100%, chủ máy chốt 19/09.** Nguyên nhân (1) và (3) là lỗi kiểm "đã xoá
 > xong" của bộ gõ, đã vá dứt điểm. Nguyên nhân (2) và (4) nhiều khả năng nằm ở phía Facebook: ô soạn tin
 > nuốt chữ tới lúc nó đang vẽ lại mà không phát tín hiệu nào, nên bộ gõ chỉ né được bằng cách chờ. Mức chọn
 > (giữa câu 40 ms, từ đầu 60 ms) lúc máy bận còn sai khoảng 1/50 câu; chủ máy chấp nhận phần lọt đó là do

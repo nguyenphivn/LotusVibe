@@ -87,19 +87,21 @@ Nói cho đúng:
 - **Máy chủ không bỏ sót sự kiện libinput** khi đang gửi phím xoá, nên cú bấm chuột ngắt từ không bị
   xử lý trễ. Đã báo ở #507, chưa gửi mã.
 - **Gõ được Messenger trên Facebook với chế độ uinput** (issue #267 của bản gốc, mở từ 05/2026:
-  `tieengs vieetj` ra `iếngiệt`). Bốn nguyên nhân: Messenger báo ô đã xoá khi mới xoá một nửa, kể cả
-  lúc con trỏ còn đứng giữa chữ đang xoá; Facebook vẽ lại ô soạn tin sau đó, đè mất chữ tới sớm; và
-  ô vừa trống còn đang nạp lại nên từ đầu tiên của tin nhắn dễ mất nhất. Cần bật
-  `WaitSurroundingEvent=True` và `MessengerSelectOvertype=True` (bôi đen bằng Shift+Left rồi gõ đè,
-  20/09: 861 lần thay chữ, 0 lần mất, chờ 3–20 ms theo xác nhận của Edge thay vì theo đồng hồ; chỉ ô
-  soạn tin Messenger, ô khác không khai vùng bôi đen). Đường lùi khi tắt công tắc đó:
-  `WaitSurroundingSettleMs=40` và `WaitSurroundingSettleFirstWordMs=60`;
-  chỉ ô soạn tin Messenger phải chờ, ô khác giao ngay. Đo trên Edge bằng máy gõ tự động lúc máy bận:
-  chờ 20 ms thì từ đầu tiên sai 30/156 và câu đầy đủ sai 8/50; chờ 40 ms giữa câu và 60 ms
-  từ đầu thì 0/100 từ đầu, 1/50 câu (60 ms cho mọi chữ thì 0/50, nhưng chậm hơn ở mọi lần bỏ dấu).
-  Chưa đo Firefox. Đã báo cách khắc phục ở #267, chưa gửi mã. **Đây là cách chữa tạm, không hết lỗi
-  100%:** nhiều khả năng lỗi nằm ở phía Facebook (ô soạn tin nuốt chữ tới lúc nó đang vẽ lại, không báo
-  gì), nên bộ gõ chỉ né được bằng cách chờ. Máy càng bận thì càng dễ lọt chữ.
+  `tieengs vieetj` ra `iếngiệt`). Hai lỗi thuộc về bộ gõ, đã vá dứt điểm: nó tưởng ô đã xoá xong khi
+  Messenger mới xoá một nửa, kể cả lúc con trỏ còn nằm giữa chữ đang xoá. Hai lỗi còn lại thuộc về
+  trang: Facebook vẽ lại ô soạn tin sau khi xoá, và ô vừa trống còn đang nạp lại, nên chữ giao vào
+  đúng lúc đó bị nuốt.
+  Cách chữa hiện tại (`MessengerSelectOvertype=True`, cần `WaitSurroundingEvent=True`): không xoá rồi
+  giao nữa, mà bôi đen phần cần bỏ bằng Shift+Left rồi gõ đè lên. Ô không lúc nào trống, không có khe
+  hở giữa xoá và giao, và Edge xác nhận vùng bôi đen nên bộ gõ chờ theo tín hiệu chứ không theo đồng
+  hồ. Đo 20/09 bằng máy gõ tự động lúc máy bận: 861 lần thay chữ, 0 lần mất, chờ 3–20 ms (thường 6).
+  Chỉ ô soạn tin Messenger dùng cách này — đo cho thấy ô khác có khai chữ chung quanh nhưng không khai
+  lại khi chỉ bôi đen, bật ra toàn máy là mất dấu khắp nơi. Ô không xác nhận thì bộ gõ trả con trỏ về
+  và bỏ lần bỏ dấu đó, không gõ đè (gõ vào sẽ chèn sai chỗ).
+  Đường lùi khi tắt công tắc trên: chờ theo đồng hồ, `WaitSurroundingSettleMs=40` và
+  `WaitSurroundingSettleFirstWordMs=60`. Đường lùi này **không hết lỗi 100%**: lúc máy bận còn sai
+  khoảng 1/50 câu, và máy càng bận càng dễ lọt. Chưa đo Firefox và Chrome. Đã báo cách khắc phục ở
+  #267 (bản chờ theo đồng hồ), chưa gửi mã.
 - **Chờ 4 ms mỗi phím xoá thay vì 2** ở Smooth và Super Smooth. Máy tải nặng: 2 ms đúng 39–46/60
   câu, 4 ms đúng 58–60/60. Máy rảnh không khác.
 
