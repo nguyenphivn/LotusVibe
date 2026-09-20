@@ -12,6 +12,9 @@ Trang này chỉ ghi **những gì khác với bản gốc**. Hướng dẫn dù
 [README của bản gốc](https://github.com/nguyenphivn/LotusVibe/blob/ban-dung/README.md) hoặc
 [trang chủ Lotus](https://lotusinputmethod.github.io/).
 
+- **Vá mới nhất (20/09): Messenger trên Facebook hết mất chữ** — bộ gõ bôi đen chữ cần bỏ bằng
+  Shift+Mũi tên trái rồi gõ đè, thay vì xoá trước rồi gõ sau. Đo 861 lần thay chữ, 0 lần mất.
+  [Xem bên dưới](#messenger-trên-facebook-bôi-đen-rồi-gõ-đè-thay-vì-xoá-rồi-gõ-2009).
 - **Nhánh để dùng:** `ban-dung` (nhánh mặc định) = `dev` của bản gốc + 23 miếng vá.
 - **Chi tiết từng vá, số đo, tác giả gốc trả lời ra sao, và hướng dẫn cài:**
   [KHAC-GI-SO-VOI-BAN-GOC.md](https://github.com/nguyenphivn/LotusVibe/blob/ban-dung/KHAC-GI-SO-VOI-BAN-GOC.md)
@@ -64,6 +67,39 @@ Nói cho đúng:
 
 ## Khác gì bản gốc
 
+### Messenger trên Facebook: bôi đen rồi gõ đè thay vì xoá rồi gõ (20/09)
+
+Gõ Telex trong ô soạn tin Messenger ở chế độ uinput thì mất chữ: `tieengs vieetj` ra `iếngiệt`
+(issue #267 của bản gốc, mở từ 05/2026). Bộ gõ vốn làm hai bước — xoá chữ cũ, rồi gõ chữ có dấu vào.
+Giữa hai bước đó Facebook vẽ lại ô soạn tin và nuốt mất chữ vừa gõ vào.
+
+Chữa bằng cách chờ thêm vài chục mili giây rồi mới gõ thì đỡ, nhưng không dứt: máy càng bận càng dễ
+lọt, và chờ bao nhiêu là đủ thì không có câu trả lời cố định.
+
+**Cách hiện tại bỏ hẳn bước xoá.** Bộ gõ bấm Shift+Mũi tên trái để bôi đen đúng số chữ cần bỏ, rồi gõ
+chữ mới đè lên vùng bôi đen. Ô soạn tin không lúc nào trống và không có khe hở giữa xoá với gõ, nên
+Facebook không còn chỗ chen vào. Quan trọng hơn: Edge **báo lại** "đang bôi đen N chữ", nên bộ gõ chờ
+đúng tín hiệu đó rồi mới gõ, thay vì chờ đồng hồ.
+
+Đo 20/09 bằng máy gõ tự động, lúc máy bận:
+
+| | Chờ theo đồng hồ (40/60 ms) | Bôi đen rồi gõ đè |
+| --- | --- | --- |
+| 100 từ đầu tiên của tin nhắn | sai 0 | sai 0 |
+| 50 câu đầy đủ | sai 1 | sai 0 |
+| Chờ mỗi lần bỏ dấu | 40 ms, từ đầu 60 ms | 3–20 ms, thường 6 ms |
+
+Bật bằng `MessengerSelectOvertype=True` (cần `WaitSurroundingEvent=True`). Ba điều cần biết:
+
+- **Chỉ dùng cho ô soạn tin Messenger.** Đo cho thấy các ô khác có khai chữ chung quanh con trỏ nhưng
+  không khai lại khi chỉ bôi đen, nên bật ra toàn máy là mất dấu khắp nơi.
+- **Ô không xác nhận thì bộ gõ không gõ đè**, mà trả con trỏ về chỗ cũ rồi bỏ lần bỏ dấu đó. Mất dấu
+  một chữ thì thấy ngay; gõ đè khi con trỏ đang lùi thì chữ chèn sai chỗ, rối và khó phát hiện.
+- **Phần bấm Shift+Mũi tên nằm ở máy chủ nền**, nên cài gói mới phải khởi động lại
+  `fcitx5-lotus-server@<user>`. Tắt công tắc trên thì quay về cách chờ theo đồng hồ.
+
+Chưa đo Firefox và Chrome. Đã báo cách khắc phục ở #267 (bản chờ theo đồng hồ), chưa gửi mã.
+
 ### Sửa lỗi gặp thật
 
 - **Hết lặp chữ đầu ở thanh địa chỉ trình duyệt với chế độ uinput** (gõ `tôi` ra `toôi`, `ê` ra
@@ -86,22 +122,8 @@ Nói cho đúng:
   0/60; Calc, Impress 0/60. Đã báo ở #162, chưa gửi mã.
 - **Máy chủ không bỏ sót sự kiện libinput** khi đang gửi phím xoá, nên cú bấm chuột ngắt từ không bị
   xử lý trễ. Đã báo ở #507, chưa gửi mã.
-- **Gõ được Messenger trên Facebook với chế độ uinput** (issue #267 của bản gốc, mở từ 05/2026:
-  `tieengs vieetj` ra `iếngiệt`). Hai lỗi thuộc về bộ gõ, đã vá dứt điểm: nó tưởng ô đã xoá xong khi
-  Messenger mới xoá một nửa, kể cả lúc con trỏ còn nằm giữa chữ đang xoá. Hai lỗi còn lại thuộc về
-  trang: Facebook vẽ lại ô soạn tin sau khi xoá, và ô vừa trống còn đang nạp lại, nên chữ giao vào
-  đúng lúc đó bị nuốt.
-  Cách chữa hiện tại (`MessengerSelectOvertype=True`, cần `WaitSurroundingEvent=True`): không xoá rồi
-  giao nữa, mà bôi đen phần cần bỏ bằng Shift+Left rồi gõ đè lên. Ô không lúc nào trống, không có khe
-  hở giữa xoá và giao, và Edge xác nhận vùng bôi đen nên bộ gõ chờ theo tín hiệu chứ không theo đồng
-  hồ. Đo 20/09 bằng máy gõ tự động lúc máy bận: 861 lần thay chữ, 0 lần mất, chờ 3–20 ms (thường 6).
-  Chỉ ô soạn tin Messenger dùng cách này — đo cho thấy ô khác có khai chữ chung quanh nhưng không khai
-  lại khi chỉ bôi đen, bật ra toàn máy là mất dấu khắp nơi. Ô không xác nhận thì bộ gõ trả con trỏ về
-  và bỏ lần bỏ dấu đó, không gõ đè (gõ vào sẽ chèn sai chỗ).
-  Đường lùi khi tắt công tắc trên: chờ theo đồng hồ, `WaitSurroundingSettleMs=40` và
-  `WaitSurroundingSettleFirstWordMs=60`. Đường lùi này **không hết lỗi 100%**: lúc máy bận còn sai
-  khoảng 1/50 câu, và máy càng bận càng dễ lọt. Chưa đo Firefox và Chrome. Đã báo cách khắc phục ở
-  #267 (bản chờ theo đồng hồ), chưa gửi mã.
+- **Gõ được Messenger trên Facebook với chế độ uinput** — bốn nguyên nhân và cách chữa ở
+  [mục trên](#messenger-trên-facebook-bôi-đen-rồi-gõ-đè-thay-vì-xoá-rồi-gõ-2009).
 - **Chờ 4 ms mỗi phím xoá thay vì 2** ở Smooth và Super Smooth. Máy tải nặng: 2 ms đúng 39–46/60
   câu, 4 ms đúng 58–60/60. Máy rảnh không khác.
 
