@@ -53,7 +53,8 @@ bool UinputDevice::initialize() {
         return false;
     guard_.reset(fd);
 
-    if (ioctl(fd, UI_SET_EVBIT, EV_KEY) < 0 || ioctl(fd, UI_SET_KEYBIT, KEY_BACKSPACE) < 0) {
+    if (ioctl(fd, UI_SET_EVBIT, EV_KEY) < 0 || ioctl(fd, UI_SET_KEYBIT, KEY_BACKSPACE) < 0 || ioctl(fd, UI_SET_KEYBIT, KEY_LEFT) < 0 ||
+        ioctl(fd, UI_SET_KEYBIT, KEY_LEFTSHIFT) < 0) {
         return false;
     }
 
@@ -83,6 +84,34 @@ void UinputDevice::send_backspace() {
     ev[2].value = 0; // Release
     // Zero-initialize ev[3] via {} set this event to SYN_REPORT
     write(guard_.get(), ev, sizeof(ev));
+}
+
+// Bôi đen soChu chữ bên trái con trỏ: giữ Shift, bắn mũi tên trái, nhả Shift. Bắn liền một mạch
+// vì đây là một thao tác chọn, không phải chuỗi phím rời như phím xoá.
+void UinputDevice::send_select(int soChu) {
+    if (!guard_.is_valid() || soChu <= 0)
+        return;
+    std::vector<struct input_event> ev(2 + (4 * static_cast<size_t>(soChu)) + 2);
+    size_t                          i = 0;
+    ev[i].type                        = EV_KEY;
+    ev[i].code                        = KEY_LEFTSHIFT;
+    ev[i].value                       = 1;
+    i += 2; // i+1: SYN_REPORT (zero-init)
+    for (int k = 0; k < soChu; ++k) {
+        ev[i].type  = EV_KEY;
+        ev[i].code  = KEY_LEFT;
+        ev[i].value = 1;
+        i += 2;
+        ev[i].type  = EV_KEY;
+        ev[i].code  = KEY_LEFT;
+        ev[i].value = 0;
+        i += 2;
+    }
+    ev[i].type  = EV_KEY;
+    ev[i].code  = KEY_LEFTSHIFT;
+    ev[i].value = 0;
+    i += 2;
+    write(guard_.get(), ev.data(), ev.size() * sizeof(struct input_event));
 }
 
 LibinputContext::LibinputContext(const struct libinput_interface* interface) : udev_(udev_new()) {
@@ -369,6 +398,8 @@ int main(int argc, char* argv[]) {
                 LotusLogger::instance().warn("Keyboard client disconnected or connection error");
                 kb_client_fd.reset(-1);
                 fds[KB_CLIENT_INDEX].fd = -1;
+            } else if (count < 0) {
+                uinput.send_select(-count); // âm = bôi đen |count| chữ
             } else {
                 pending_backspaces += count - 1;
                 uinput.send_backspace();

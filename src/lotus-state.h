@@ -138,6 +138,20 @@ namespace fcitx {
 
         // Chờ theo sự kiện thay vì ngủ (xem handleUInputKeyPress)
         std::unique_ptr<HandlerTableEntry<EventHandler>> cho_surr_watcher_;
+
+        // Bôi đen rồi gõ đè: gửi Shift+Left cho đủ số chữ cần bỏ, chờ ảnh báo vùng chọn đúng độ dài
+        // rồi commit đè lên. Ô không bao giờ trống nên Messenger không nạp lại dòng gợi ý.
+        void                                             send_select_uinput(int soChu) const; // gửi số âm: máy chủ hiểu là bôi đen
+        void                                             boiDenRoiGoDe(const std::string& addedPart, int soChu);
+        void                                             ketThucBoiDen(const char* ly_do, bool tu_timer);
+        void                                             boHanBoiDen();
+        std::unique_ptr<HandlerTableEntry<EventHandler>> boi_watcher_;
+        std::unique_ptr<EventSourceTime>                 boi_timer_;
+        bool                                             boi_dang_cho_ = false;
+        unsigned int                                     boi_con_tro_  = 0; // vị trí con trỏ trước khi bôi
+        bool                                             boi_co_anh_   = false;
+        int                                              boi_so_chu_   = 0;
+        uint64_t                                         boi_bat_dau_  = 0;
         std::unique_ptr<EventSourceTime>                 cho_surr_timer_;
         uint64_t                                         cho_surr_bat_dau_ = 0;
         uint64_t                                         cho_moc_giao_     = 0; // B33: lúc hẹn giao chữ (CLOCK_MONOTONIC, µs)

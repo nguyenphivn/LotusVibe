@@ -98,7 +98,8 @@ Máy gốc còn bật `WaitSurroundingEvent=True` trong `~/.config/fcitx5/conf/l
 mặc định tắt). Vá thanh địa chỉ không phụ thuộc tuỳ chọn này, nhưng mọi lượt đo trên máy gốc đều
 chạy khi nó bật.
 
-Máy Fedora còn đặt `WaitSurroundingSettleMs=40` và `WaitSurroundingSettleFirstWordMs=60` cùng tệp
+Máy Fedora còn đặt `MessengerSelectOvertype=True` (bôi đen rồi gõ đè trong ô soạn tin Messenger), cùng
+`WaitSurroundingSettleMs=40` và `WaitSurroundingSettleFirstWordMs=60` làm đường lùi khi tắt công tắc đó, cùng tệp
 đó, để gõ được Messenger trên Facebook (vá nhóm E, cả hai mặc định 0). Tuỳ chọn này chỉ có tác dụng khi `WaitSurroundingEvent=True`.
 
 **Cập nhật bản mới về sau:** trong thư mục `LotusVibe`, chạy `git pull --recurse-submodules`,
@@ -422,6 +423,13 @@ tiền kiêm chạy CI nên tải nặng là chuyện có thật. Đã ghi trong
 
 ### Messenger trên Facebook mất chữ ở chế độ uinput (`60144f9`, `ab5b307`, vá bổ sung 19/09 ×2)
 
+> **Cập nhật 20/09: đã bỏ được đồng hồ ở ô soạn tin Messenger.** Thay vì xoá trước rồi giao chữ sau,
+> bộ gõ bôi đen phần cần bỏ bằng Shift+Left rồi gõ đè lên vùng chọn. Ô không lúc nào trống và không có
+> khe hở giữa xoá và giao, nên hai nguyên nhân (2) và (4) mất chỗ bám; quan trọng hơn, Edge **xác nhận**
+> vùng bôi đen nên bộ gõ chờ theo tín hiệu thật chứ không theo thời gian. Đo 20/09: 861 lần thay chữ,
+> 0 lần mất chữ, xác nhận về sau 3–20 ms (trung vị 6), không lần nào chạm hạn. Đoạn dưới nói về đường
+> cũ (`WaitSurroundingSettleMs`), vẫn giữ làm đường lùi.
+>
 > **Cách chữa tạm, không hết lỗi 100% (chủ máy chốt 19/09).** Nguyên nhân (1) và (3) là lỗi kiểm "đã xoá
 > xong" của bộ gõ, đã vá dứt điểm. Nguyên nhân (2) và (4) nhiều khả năng nằm ở phía Facebook: ô soạn tin
 > nuốt chữ tới lúc nó đang vẽ lại mà không phát tín hiệu nào, nên bộ gõ chỉ né được bằng cách chờ. Mức chọn
@@ -550,6 +558,45 @@ có thể mắc đúng lỗi (1) và (3)). Chưa kiểm ô soạn thảo khác t
 Edge mới chưa bật Lotus. Trang tự xoá ô nên Lotus còn nhớ từ lượt trước (phải bấm một phím di chuyển con
 trỏ giữa các lượt). Phím Esc làm ô Lexical mất chọn. Bộ đo (trang Lexical tự ghi sự kiện, máy chủ nhỏ,
 kịch bản chỉ gõ khi trang đang được chọn) chưa đưa vào workbench.
+
+### Bôi đen rồi gõ đè trong ô soạn tin Messenger (20/09)
+
+**Ý tưởng:** không xoá rồi giao nữa. Bắn Shift+Left cho đủ số chữ cần bỏ, chờ ảnh báo vùng chọn đúng độ
+dài (`anchor` lệch `cursor` đúng N), rồi `commitString` đè lên vùng chọn.
+
+**Vá:**
+- Máy chủ uinput nhận **số âm** trên cùng socket = bôi đen |n| chữ: giữ `KEY_LEFTSHIFT`, bắn `KEY_LEFT`
+  n lần, nhả Shift, tất cả trong một lần ghi. Phải đăng ký thêm hai mã phím đó với `UI_SET_KEYBIT`.
+- Addon: `MessengerSelectOvertype` (mặc định tắt), chỉ áp cho ô có hình ô soạn tin Messenger.
+- Phím Shift+Left do chính mình bắn quay lại fcitx: phải `forward()` thẳng tới ứng dụng và KHÔNG được
+  coi là người dùng di con trỏ.
+- "Van an toàn" cũ (`current_backspace_count_ >= expected_backspaces_` ở phím kế tiếp) phải bỏ qua khi
+  đang chờ vùng chọn: đường này không gửi phím xoá nào nên van luôn thấy "đủ" và tắt trạng thái ngay.
+- Hết hạn 150 ms mà ô không xác nhận: **không gõ đè** (con trỏ đang lùi N chữ, gõ vào là chữ chèn sai chỗ
+  và rối), trả con trỏ về rồi bỏ lần thay đó — mất dấu một chữ, thấy ngay.
+
+**Đo (máy gõ tự động, Edge, tải máy 5–7, 20/09):**
+
+| Bản | Chỉ từ đầu tiên | Câu đầy đủ |
+| --- | --- | --- |
+| chờ đồng hồ 40 ms, từ đầu 60 ms | sai 0/100 | sai 1/50 |
+| bôi đen rồi gõ đè | sai 0/100 | sai 0/50 |
+
+861 lần thay chữ, 0 lần chạm hạn; xác nhận về sau 3 ms (nhanh nhất), 6 ms (trung vị), 20 ms (chậm nhất).
+
+**Vì sao chỉ Messenger:** bật cho mọi ô thì hỏng ngay — các ô khác có khai chữ chung quanh nhưng không
+khai lại khi chỉ bôi đen, nên 150 ms trôi qua không một tin nào và mọi chữ đều mất dấu (đo 20/09, đường
+lùi hoạt động đúng: mất dấu chứ không rối chữ). Suy đoán chưa kiểm: trình duyệt vốn phải theo dõi vùng
+chọn cho JavaScript của trang nên khai sẵn, còn ứng dụng thường chỉ khai khi chữ đổi.
+
+**Kiểm thử:** `super_smooth_messenger_select_overtype` — ô Messenger phải gửi số âm thay vì phím xoá (đỏ
+trên mã trước ở đúng bước này); không được gõ khi chưa có xác nhận, kể cả khi ô báo ảnh khác trong lúc chờ
+(đỏ khi nhận bừa mọi tin); hết hạn thì không gõ và trả con trỏ (đỏ khi vẫn gõ đè); ô thường vẫn gửi phím
+xoá. ctest 21/21.
+
+**Cài đặt:** phần bôi đen nằm ở máy chủ nền, nên gói mới phải kèm khởi động lại
+`fcitx5-lotus-server@<user>`. Addon mới nói chuyện với máy chủ cũ thì số âm bị hiểu sai (máy chủ cũ bắn
+một phím xoá lạc); addon cũ với máy chủ mới thì không sao.
 
 **Upstream:** đã báo cách khắc phục ở #267 (17/09; cập nhật 19/09: nguyên nhân (3) và (4), đề xuất 60 ms; fork tự dùng 40 ms giữa câu, 60 ms từ đầu), chưa gửi mã.
 

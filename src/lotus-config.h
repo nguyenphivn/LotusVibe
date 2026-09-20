@@ -246,6 +246,7 @@ namespace fcitx {
         Option<int>  waitSurroundingProbeEvery{this, "WaitSurroundingProbeEvery",
                                                _("Experiment: when the app's snapshot is frozen during deletion, stop waiting and re-probe once every N replacements"), 4};
         Option<int>  waitSurroundingSettleMs{this, "WaitSurroundingSettleMs", _("Experiment: extra ms to wait after the deletion shows done, Messenger composer only"), 0};
+        Option<bool> messengerSelectOvertype{this, "MessengerSelectOvertype", _("Experiment: select with Shift+Left and type over it in the Messenger composer"), false};
         Option<int>  waitSurroundingSettleFirstWordMs{this, "WaitSurroundingSettleFirstWordMs",
                                                       _("Experiment: settle wait for the first word of a Messenger message (composer still loading)"), 0};
         Option<int>  waitSurroundingMinPerKeyMs{this, "WaitSurroundingMinPerKeyMs",

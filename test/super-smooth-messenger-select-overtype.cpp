@@ -1,0 +1,216 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// Deleting first and committing after leaves a gap Facebook repaints into, so the Messenger composer
+// selects the old characters with Shift+Left instead and types over the selection: no empty state, no
+// gap, and Edge confirms the selection (rig 20/09: 861 replacements, 0 lost, confirmed in 3-20 ms).
+// The server is told to select by a NEGATIVE count on the same socket.
+// A field that never confirms the selection must NOT be typed into: the cursor is sitting N characters
+// back, so a commit would scramble the text. Give the cursor back and drop the replacement instead.
+#include "lotus-engine.h"
+#include "lotus-utils.h"
+#include "test-input-context.h"
+
+#include <fcitx-utils/utf8.h>
+
+#include <cerrno>
+#include <cstddef>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
+#include <memory>
+#include <string>
+
+#include <poll.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
+
+namespace {
+
+    void reportFailure(const std::string& step, const std::string& expected, const std::string& actual) {
+        std::cerr << "Step: " << step << "\nExpected: " << expected << "\nActual: " << actual << '\n';
+    }
+
+    std::string joinCommits(const TestInputContext& context) {
+        std::string out;
+        for (const auto& commit : context.commits())
+            out += "['" + commit + "']";
+        return out.empty() ? "(none)" : out;
+    }
+
+    class RequestListener {
+      public:
+        RequestListener() {
+            fd_ = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+            sockaddr_un address{};
+            address.sun_family    = AF_UNIX;
+            const auto socketPath = buildSocketPath("kb_socket");
+            address.sun_path[0]   = '\0';
+            std::memcpy(&address.sun_path[1], socketPath.data(), socketPath.size());
+            const auto length = static_cast<socklen_t>(offsetof(sockaddr_un, sun_path) + socketPath.size() + 1);
+            if (fd_ < 0 || bind(fd_, reinterpret_cast<const sockaddr*>(&address), length) < 0 || listen(fd_, 1) < 0) {
+                reportFailure("bind replacement socket", "bind succeeds", std::strerror(errno));
+                if (fd_ >= 0)
+                    close(fd_);
+                fd_ = -1;
+            }
+        }
+        ~RequestListener() {
+            if (client_ >= 0)
+                close(client_);
+            if (fd_ >= 0)
+                close(fd_);
+        }
+        bool valid() const {
+            return fd_ >= 0;
+        }
+        bool receive(int& count) {
+            if (client_ < 0) {
+                pollfd p{fd_, POLLIN, 0};
+                if (poll(&p, 1, 2000) <= 0 || (client_ = accept(fd_, nullptr, nullptr)) < 0) {
+                    reportFailure("accept replacement socket", "connection within 2000 ms", "none");
+                    return false;
+                }
+            }
+            pollfd p{client_, POLLIN, 0};
+            if (poll(&p, 1, 2000) <= 0 || recv(client_, &count, sizeof(count), 0) != sizeof(count)) {
+                reportFailure("receive replacement request", "request within 2000 ms", "none");
+                return false;
+            }
+            return true;
+        }
+
+      private:
+        int fd_     = -1;
+        int client_ = -1;
+    };
+
+    void setSnapshot(TestInputContext& context, const std::string& text, unsigned int cursor) {
+        context.surroundingText().setText(text, cursor, cursor);
+        context.updateSurroundingText();
+    }
+
+    bool type(fcitx::LotusEngine& engine, const fcitx::InputMethodEntry& entry, TestInputContext& context, fcitx::KeySym symbol, bool accepted) {
+        fcitx::KeyEvent event(&context, fcitx::Key(symbol), false);
+        engine.keyEvent(entry, event);
+        if (event.accepted() != accepted) {
+            reportFailure("process key " + std::to_string(symbol), "accepted=" + std::to_string(accepted), "accepted=" + std::to_string(event.accepted()));
+            return false;
+        }
+        return true;
+    }
+
+} // namespace
+
+int main() {
+    const std::string socketNamespace = "test-" + std::to_string(getpid());
+    setenv("LOTUS_SOCKET_NAMESPACE", socketNamespace.c_str(), 1);
+
+    configureTestPaths("fcitx5-lotus-super-smooth-messenger-select-overtype");
+    TestInstance       testInstance;
+    fcitx::LotusEngine engine(&testInstance.instance);
+    fcitx::RawConfig   config;
+    config.setValueByPath("Mode", "Uinput (Super Smooth)");
+    config.setValueByPath("InputMethod", "Telex");
+    config.setValueByPath("WaitSurroundingEvent", "True");
+    config.setValueByPath("WaitSurroundingSettleMs", "40");
+    config.setValueByPath("MessengerSelectOvertype", "True");
+    engine.setConfig(config);
+    if (engine.config().mode.value() != fcitx::LotusMode::SuperSmooth || !engine.config().waitSurroundingEvent.value()) {
+        reportFailure("configure Super Smooth", "mode=SuperSmooth, WaitSurroundingEvent=True", "config differs");
+        return 1;
+    }
+
+    RequestListener listener;
+    if (!listener.valid())
+        return 1;
+    auto context = std::make_unique<TestInputContext>(&testInstance.instance);
+    context->setCapabilityFlags(fcitx::CapabilityFlag::SurroundingText);
+    context->focusIn();
+    fcitx::InputMethodEntry  entry("lotus", "Lotus", "vi", "lotus");
+    fcitx::InputContextEvent focus(context.get(), fcitx::EventType::InputContextFocusIn);
+    engine.activate(entry, focus);
+
+    auto setSelection = [&](const std::string& text, unsigned int cursor, unsigned int anchor) {
+        context->surroundingText().setText(text, cursor, anchor);
+        context->updateSurroundingText();
+    };
+    auto typeLetters = [&](const std::string& letters, const std::string& shownBefore, const std::string& tail) {
+        std::string shown = shownBefore;
+        for (char c : letters) {
+            if (!type(engine, entry, *context, static_cast<fcitx::KeySym>(c), false))
+                return false;
+            shown += c;
+            setSnapshot(*context, shown + tail, static_cast<unsigned int>(fcitx::utf8::length(shown)));
+        }
+        return true;
+    };
+
+    // The Messenger composer: text, then the two newlines the page keeps after the cursor.
+    setSnapshot(*context, "\n\n", 0);
+    if (!typeLetters("chu", "", "\n\n"))
+        return 1;
+
+    // Telex "w": u -> ư. One character to replace, so the server is asked to select one.
+    if (!type(engine, entry, *context, FcitxKey_w, true))
+        return 1;
+    int request = 0;
+    if (!listener.receive(request))
+        return 1;
+    if (request != -1) {
+        reportFailure("ask the server to select one character (negative count)", "-1", std::to_string(request));
+        return 1;
+    }
+    // Edge keeps reporting the composer while it repaints; none of those is a selection.
+    pumpEventLoop(testInstance.instance, 10);
+    setSnapshot(*context, "chu\n\n", 3);
+    pumpEventLoop(testInstance.instance, 10);
+    setSnapshot(*context, "chu\n\n", 2);
+    pumpEventLoop(testInstance.instance, 10);
+    if (!context->commits().empty()) {
+        reportFailure("no commit while the selection is unconfirmed", "commits=(none)", "commits=" + joinCommits(*context));
+        return 1;
+    }
+
+    // Edge confirms: the same text, cursor still at 3, anchor one character back.
+    setSelection("chu\n\n", 3, 2);
+    pumpEventLoop(testInstance.instance, 10);
+    if (context->commits() != std::vector<std::string>{"ư"}) {
+        reportFailure("type over the selection once Edge confirms it", "commits=['ư']", "commits=" + joinCommits(*context));
+        return 1;
+    }
+    setSnapshot(*context, "chư\n\n", 3);
+
+    // A field that never confirms: after the deadline the cursor goes back and nothing is typed.
+    const size_t forwardedBefore = context->forwarded().size();
+    if (!type(engine, entry, *context, FcitxKey_x, true))
+        return 1;
+    if (!listener.receive(request) || request != -1) {
+        reportFailure("ask the server to select one character for ư -> ữ", "-1", std::to_string(request));
+        return 1;
+    }
+    pumpEventLoop(testInstance.instance, 200);
+    if (context->commits() != std::vector<std::string>{"ư"}) {
+        reportFailure("no commit when the selection is never confirmed", "commits=['ư']", "commits=" + joinCommits(*context));
+        return 1;
+    }
+    if (context->forwarded().size() <= forwardedBefore) {
+        reportFailure("give the cursor back when the selection is never confirmed", "a forwarded key", "no forwarded key");
+        return 1;
+    }
+
+    // A plain field has no "\n\n" after the cursor: it keeps deleting with backspaces.
+    setSnapshot(*context, "cu", 2);
+    if (!typeLetters("cu", "", ""))
+        return 1;
+    if (!type(engine, entry, *context, FcitxKey_w, true))
+        return 1;
+    if (!listener.receive(request)) {
+        return 1;
+    }
+    if (request <= 0) {
+        reportFailure("a plain field still deletes with backspaces", "a positive backspace count", std::to_string(request));
+        return 1;
+    }
+    return 0;
+}

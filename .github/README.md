@@ -90,7 +90,10 @@ Nói cho đúng:
   `tieengs vieetj` ra `iếngiệt`). Bốn nguyên nhân: Messenger báo ô đã xoá khi mới xoá một nửa, kể cả
   lúc con trỏ còn đứng giữa chữ đang xoá; Facebook vẽ lại ô soạn tin sau đó, đè mất chữ tới sớm; và
   ô vừa trống còn đang nạp lại nên từ đầu tiên của tin nhắn dễ mất nhất. Cần bật
-  `WaitSurroundingEvent=True`, `WaitSurroundingSettleMs=40` và `WaitSurroundingSettleFirstWordMs=60`;
+  `WaitSurroundingEvent=True` và `MessengerSelectOvertype=True` (bôi đen bằng Shift+Left rồi gõ đè,
+  20/09: 861 lần thay chữ, 0 lần mất, chờ 3–20 ms theo xác nhận của Edge thay vì theo đồng hồ; chỉ ô
+  soạn tin Messenger, ô khác không khai vùng bôi đen). Đường lùi khi tắt công tắc đó:
+  `WaitSurroundingSettleMs=40` và `WaitSurroundingSettleFirstWordMs=60`;
   chỉ ô soạn tin Messenger phải chờ, ô khác giao ngay. Đo trên Edge bằng máy gõ tự động lúc máy bận:
   chờ 20 ms thì từ đầu tiên sai 30/156 và câu đầy đủ sai 8/50; chờ 40 ms giữa câu và 60 ms
   từ đầu thì 0/100 từ đầu, 1/50 câu (60 ms cho mọi chữ thì 0/50, nhưng chậm hơn ở mọi lần bỏ dấu).
@@ -117,8 +120,8 @@ Cả hai nằm ở [PR #492](https://github.com/LotusInputMethod/fcitx5-lotus/pu
 
 ### Kiểm thử
 
-- 20 bài kiểm thay vì 9: thêm kiểm bất biến trên chuỗi phím ngẫu nhiên, kiểm màu panel KDE và GNOME, tái
-  hiện lỗi giữ phím của issue #472, và bảy bài cho lỗi Messenger trên Facebook.
+- 21 bài kiểm thay vì 9: thêm kiểm bất biến trên chuỗi phím ngẫu nhiên, kiểm màu panel KDE và GNOME, tái
+  hiện lỗi giữ phím của issue #472, và tám bài cho lỗi Messenger trên Facebook.
 
 ## Bản này KHÔNG sửa
 

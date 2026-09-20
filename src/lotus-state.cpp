@@ -845,6 +845,95 @@ namespace fcitx {
         return false;
     }
 
+    void LotusState::send_select_uinput(int soChu) const {
+        send_backspace_uinput(-soChu);
+    }
+
+    void LotusState::boiDenRoiGoDe(const std::string& addedPart, int soChu) {
+        is_deleting_.store(true, std::memory_order_release);
+        pending_commit_string_   = addedPart;
+        expected_backspaces_     = 0;
+        current_backspace_count_ = 0;
+        boi_so_chu_              = soChu;
+        boi_dang_cho_            = true;
+        {
+            const auto& sg = ic_->surroundingText();
+            boi_co_anh_    = sg.isValid();
+            boi_con_tro_   = boi_co_anh_ ? sg.cursor() : 0;
+        }
+        boi_bat_dau_   = ::fcitx::now(CLOCK_MONOTONIC);
+        auto* instance = engine_->instance();
+        boi_watcher_.reset(); // ngoài dispatch của nó, an toàn
+        boi_watcher_ = instance->watchEvent(EventType::InputContextSurroundingTextUpdated, EventWatcherPhase::Default, [this](Event& e) {
+            auto& ice = static_cast<InputContextEvent&>(e);
+            if (!boi_dang_cho_ || ice.inputContext() != ic_ || !is_deleting_.load()) {
+                return;
+            }
+            const auto& s = ic_->surroundingText();
+            if (!s.isValid()) {
+                return;
+            }
+            const int lech = static_cast<int>(s.anchor()) - static_cast<int>(s.cursor());
+            if (lech != boi_so_chu_ && lech != -boi_so_chu_) {
+                return;
+            }
+            ketThucBoiDen("boi den", false);
+        });
+        boi_timer_   = instance->eventLoop().addTimeEvent(CLOCK_MONOTONIC, boi_bat_dau_ + 150000ULL, 1000, [this](EventSourceTime*, uint64_t) {
+            if (boi_dang_cho_ && is_deleting_.load()) {
+                boHanBoiDen();
+            }
+            return false;
+        });
+        // forwardKey của fcitx KHÔNG kèm được Shift: đo 20/09 trên Edge/KWin, con trỏ lùi mà anchor đi
+        // theo (không có vùng chọn), kể cả khi bấm giữ Shift_L quanh loạt mũi tên. Bàn phím thật thì
+        // Edge báo vùng chọn đúng (cur=3 anc=1) ⇒ phải bắn ở mức thiết bị qua máy chủ uinput.
+        send_select_uinput(soChu);
+        LOTUS_INFO("Select " + std::to_string(soChu) + " chars");
+    }
+
+    // Ô không báo vùng bôi đen trong hạn: KHÔNG gõ đè (con trỏ đang lùi, chữ sẽ chèn sai chỗ và làm
+    // rối chữ). Đưa con trỏ về chỗ cũ rồi bỏ lần thay này — người gõ mất dấu một chữ và thấy ngay.
+    void LotusState::boHanBoiDen() {
+        const auto& sg     = ic_->surroundingText();
+        int         soPhai = 1; // vùng bôi đen có thật nhưng ô không báo: một phím phải là về chỗ cũ
+        if (boi_co_anh_ && sg.isValid() && sg.cursor() == sg.anchor() && sg.cursor() + static_cast<unsigned int>(boi_so_chu_) == boi_con_tro_) {
+            soPhai = boi_so_chu_; // ô chỉ dời con trỏ, không bôi đen
+        }
+        for (int i = 0; i < soPhai; ++i) {
+            ic_->forwardKey(Key(FcitxKey_Right), false);
+            ic_->forwardKey(Key(FcitxKey_Right), true);
+        }
+        LOTUS_INFO("Overtype bo han after " + std::to_string((::fcitx::now(CLOCK_MONOTONIC) - boi_bat_dau_) / 1000) + " ms, tra con tro " + std::to_string(soPhai));
+        boi_dang_cho_ = false;
+        pending_commit_string_.clear();
+        expected_backspaces_     = 0;
+        current_backspace_count_ = 0;
+        hasHistory_              = false;
+        ResetEngine(lotusEngine_.handle());
+        oldPreBuffer_.clear();
+        is_deleting_.store(false);
+        buffered_keys_.clear();
+    }
+
+    void LotusState::ketThucBoiDen(const char* ly_do, bool tu_timer) {
+        const auto tre_ms = (::fcitx::now(CLOCK_MONOTONIC) - boi_bat_dau_) / 1000;
+        LOTUS_INFO("Overtype " + std::string(ly_do) + " after " + std::to_string(tre_ms) + " ms");
+        boi_dang_cho_ = false;
+        if (!tu_timer && boi_timer_) {
+            boi_timer_.reset(); // không reset từ trong chính callback của nó
+        }
+        if (!pending_commit_string_.empty()) {
+            ic_->commitString(pending_commit_string_);
+            LOTUS_INFO("Commit: " + pending_commit_string_);
+        }
+        pending_commit_string_.clear();
+        expected_backspaces_     = 0;
+        current_backspace_count_ = 0;
+        is_deleting_.store(false);
+        replayBufferedKeys();
+    }
+
     void LotusState::performReplacement(const std::string& deletedPart, const std::string& addedPart) {
         LOTUS_INFO("Perform replacement: " + deletedPart + " -> " + addedPart); //NOLINT
         current_backspace_count_ = 0;
@@ -875,6 +964,12 @@ namespace fcitx {
         }
         const auto&       surrounding = ic_->surroundingText();
         const std::string surrText    = surrounding.text();
+        // Chỉ ô soạn tin Messenger: đo 20/09, các ô khác có khai chữ chung quanh nhưng KHÔNG khai lại
+        // khi chỉ bôi đen (150 ms không một tin nào) ⇒ bật ra mọi ô là mất dấu toàn máy.
+        if (engine_->config().messengerSelectOvertype.value() && realMode != LotusMode::Minecraft && giongOSoanTinMessenger(surrounding)) {
+            boiDenRoiGoDe(addedPart, static_cast<int>(utf8::length(deletedPart)));
+            return;
+        }
         // LibreOffice gán Backspace thành phím tắt (.uno:SwBackspace) và mọi phím tắt chạy HẸN SAU
         // (AsyncAccelExec::execAsync), còn chữ commit chèn ngay → chữ vượt mặt phím xoá còn trong hàng
         // ('chao'+f → 'chaà'; đo 16/09 Writer: 30–36/60 từ sai, chờ lâu hơn / sync mode / forwardKey đều không cứu).
@@ -1402,13 +1497,19 @@ namespace fcitx {
         }
         if (keyEvent.isRelease())
             return;
+        if (const KeySym symBoi = keyEvent.rawKey().sym(); boi_dang_cho_ && (symBoi == FcitxKey_Left || symBoi == FcitxKey_Shift_L || symBoi == FcitxKey_Shift_R)) {
+            // Shift+Left do chính mình bắn ra để bôi đen: phải tới được ứng dụng, và không được coi
+            // là người dùng di con trỏ (sẽ xoá mất chữ đang chờ giao).
+            keyEvent.forward();
+            return;
+        }
         if (uinput_client_fd_ < 0) {
             LOTUS_WARN("Cannot connect to uinput server, reconnecting....");
             connect_uinput_server();
         }
         // Van an toàn này tắt cờ lặng lẽ ở phím kế tiếp; khi đang chờ sự kiện thì phải bỏ qua,
         // nếu không chữ chờ giao bị vứt (v2: " Nam").
-        if (!cho_dang_cho_ && current_backspace_count_ >= expected_backspaces_ && is_deleting_.load()) {
+        if (!cho_dang_cho_ && !boi_dang_cho_ && current_backspace_count_ >= expected_backspaces_ && is_deleting_.load()) {
             is_deleting_.store(false);
             current_backspace_count_ = 0;
             expected_backspaces_     = 0;
