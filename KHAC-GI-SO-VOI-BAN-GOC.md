@@ -609,14 +609,20 @@ bất kể mũi tên đi đường nào. Người đã tự đặt Shift phải 
 Đối chứng trên máy (bàn phím ảo, ô soạn tin Messenger trên Edge đang được chọn): chạm Shift trái một
 mình ⇒ trạng thái 2 → 1 (rơi về tiếng Anh); chạm Shift phải ⇒ 2 → 2. Lần đầu chạy khi không ô nào được
 chọn thì cả hai đều 2 → 2 — phép thử mù, không tính. Máy gõ 50 câu với máy chủ Shift phải: bôi đen xác
-nhận 659/660 lần, bộ gõ ở tiếng Việt suốt lượt; sai 1/50 do lỗi còn mở dưới đây, không do Shift.
+nhận 659/660 lần, bộ gõ ở tiếng Việt suốt lượt; sai 1/50 do lỗi vứt phím dưới đây, không do Shift.
 
-**Còn mở — hết hạn thì vứt phím gõ trong lúc chờ.** Đo 23/09, câu 32: Facebook chậm tới mức chữ `c` vừa
-gõ chưa hiện, ô không báo vùng chọn trong 150 ms ⇒ đường lùi bỏ lần thêm dấu (`đươc`, đúng thiết kế),
+**Hết hạn thì trả lại phím gõ trong lúc chờ (23/09).** Đo 23/09, câu 32: Facebook chậm tới mức chữ `c`
+vừa gõ chưa hiện, ô không báo vùng chọn trong 150 ms ⇒ đường lùi bỏ lần thêm dấu (`đươc`, đúng thiết kế),
 nhưng `boHanBoiDen()` xoá luôn `buffered_keys_` nên dấu cách gõ trong 150 ms đó mất theo (`đươcđêm`).
-Lượt 20/09 không có lần chạm hạn nào nên chưa lộ.
+Lượt 20/09 không có lần chạm hạn nào nên chưa lộ. Vá: đường lùi gọi `replayBufferedKeys()` sau khi trả con
+trỏ, như đường xác nhận. Phím bỏ dấu nằm trong hàng thì ra chữ thường, vì bộ gõ đã quên từ trước đó.
 
-**Upstream:** đã báo cách khắc phục ở #267 (17/09; cập nhật 19/09: nguyên nhân (3) và (4), đề xuất 60 ms; fork tự dùng 40 ms giữa câu, 60 ms từ đầu), chưa gửi mã.
+Kiểm: `super_smooth_messenger_select_overtype` gõ dấu cách và `d` trong lúc chờ một vùng chọn không bao
+giờ được xác nhận, đòi sau `ư` phải ra đúng `" d"`. Trên mã cũ đỏ đúng bước đó (`commits=['ư']`); đặt lại
+`buffered_keys_.clear()` cũng đỏ đúng bước đó. ctest 21/21. Máy gõ 50 câu: sai 0/50, 660/660 vùng chọn
+được xác nhận — lượt này không có lần chạm hạn, nên đường trả phím mới chỉ được bài kiểm chứng minh.
+
+**Upstream:** đã báo cách khắc phục ở #267 (17/09; cập nhật 19/09: nguyên nhân (3) và (4), đề xuất 60 ms; fork tự dùng 40 ms giữa câu, 60 ms từ đầu; 20/09: bình luận mới về cách bôi đen rồi gõ đè), chưa gửi mã.
 
 ### Icon chữ V màu đen trên thanh trên cùng của GNOME
 

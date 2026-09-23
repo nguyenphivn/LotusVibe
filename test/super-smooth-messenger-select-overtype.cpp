@@ -5,7 +5,8 @@
 // gap, and Edge confirms the selection (rig 20/09: 861 replacements, 0 lost, confirmed in 3-20 ms).
 // The server is told to select by a NEGATIVE count on the same socket.
 // A field that never confirms the selection must NOT be typed into: the cursor is sitting N characters
-// back, so a commit would scramble the text. Give the cursor back and drop the replacement instead.
+// back, so a commit would scramble the text. Give the cursor back and drop the replacement instead,
+// but still type the keys queued during the wait.
 #include "lotus-engine.h"
 #include "lotus-utils.h"
 #include "test-input-context.h"
@@ -189,16 +190,37 @@ int main() {
         reportFailure("ask the server to select one character for ư -> ữ", "-1", std::to_string(request));
         return 1;
     }
-    pumpEventLoop(testInstance.instance, 200);
-    if (context->commits() != std::vector<std::string>{"ư"}) {
-        reportFailure("no commit when the selection is never confirmed", "commits=['ư']", "commits=" + joinCommits(*context));
+    // Keys typed while waiting are queued (the cursor is mid-selection). Rig 23/09: the fallback threw
+    // the queue away, so a space typed in those 150 ms vanished ("đươcđêm").
+    pumpEventLoop(testInstance.instance, 10);
+    if (!type(engine, entry, *context, FcitxKey_space, true) || !type(engine, entry, *context, FcitxKey_d, true))
         return 1;
+    pumpEventLoop(testInstance.instance, 200);
+    for (const auto& commit : context->commits()) {
+        if (commit.find("ữ") != std::string::npos) {
+            reportFailure("no overtype when the selection is never confirmed", "no commit of 'ữ'", "commits=" + joinCommits(*context));
+            return 1;
+        }
     }
     if (context->forwarded().size() <= forwardedBefore) {
         reportFailure("give the cursor back when the selection is never confirmed", "a forwarded key", "no forwarded key");
         return 1;
     }
+    {
+        std::string typedBack;
+        for (size_t i = 1; i < context->commits().size(); ++i)
+            typedBack += context->commits()[i];
+        if (context->commits().empty() || context->commits()[0] != "ư" || typedBack != " d") {
+            reportFailure("keys typed during a never-confirmed wait are typed back", "commits=['ư'] then ' d'", "commits=" + joinCommits(*context));
+            return 1;
+        }
+    }
 
+    // Moving to another field: the typed-back "d" must not carry over as the start of the next word.
+    {
+        fcitx::InputContextEvent leave(context.get(), fcitx::EventType::InputContextFocusOut);
+        engine.reset(entry, leave);
+    }
     // A plain field has no "\n\n" after the cursor: it keeps deleting with backspaces.
     setSnapshot(*context, "cu", 2);
     if (!typeLetters("cu", "", ""))

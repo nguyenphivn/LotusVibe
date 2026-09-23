@@ -913,7 +913,9 @@ namespace fcitx {
         ResetEngine(lotusEngine_.handle());
         oldPreBuffer_.clear();
         is_deleting_.store(false);
-        buffered_keys_.clear();
+        // Phím gõ trong lúc chờ là phím thật của người gõ: trả lại, không vứt (đo 23/09: vứt thì mất dấu
+        // cách, ra "đươcđêm"). Con trỏ đã về chỗ cũ, nên gõ lại ở đây cũng như phím gõ ngay sau.
+        replayBufferedKeys();
     }
 
     void LotusState::ketThucBoiDen(const char* ly_do, bool tu_timer) {
