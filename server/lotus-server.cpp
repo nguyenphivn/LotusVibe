@@ -54,7 +54,7 @@ bool UinputDevice::initialize() {
     guard_.reset(fd);
 
     if (ioctl(fd, UI_SET_EVBIT, EV_KEY) < 0 || ioctl(fd, UI_SET_KEYBIT, KEY_BACKSPACE) < 0 || ioctl(fd, UI_SET_KEYBIT, KEY_LEFT) < 0 ||
-        ioctl(fd, UI_SET_KEYBIT, KEY_LEFTSHIFT) < 0) {
+        ioctl(fd, UI_SET_KEYBIT, KEY_RIGHTSHIFT) < 0) {
         return false;
     }
 
@@ -86,15 +86,18 @@ void UinputDevice::send_backspace() {
     write(guard_.get(), ev, sizeof(ev));
 }
 
-// Bôi đen soChu chữ bên trái con trỏ: giữ Shift, bắn mũi tên trái, nhả Shift. Bắn liền một mạch
+// Bôi đen soChu chữ bên trái con trỏ: giữ Shift PHẢI, bắn mũi tên trái, nhả Shift. Bắn liền một mạch
 // vì đây là một thao tác chọn, không phải chuỗi phím rời như phím xoá.
+// Không dùng Shift trái: fcitx5 mặc định coi chạm Shift trái một mình là chuyển tiếng Anh. Có Shift
+// trái thì thỉnh thoảng bộ gõ rơi về tiếng Anh trong ô Messenger (gặp khi dùng thật 23/09; nghi fcitx5
+// không thấy mũi tên ở giữa). Shift phải không phải phím chuyển nên không thể dính.
 void UinputDevice::send_select(int soChu) {
     if (!guard_.is_valid() || soChu <= 0)
         return;
     std::vector<struct input_event> ev(2 + (4 * static_cast<size_t>(soChu)) + 2);
     size_t                          i = 0;
     ev[i].type                        = EV_KEY;
-    ev[i].code                        = KEY_LEFTSHIFT;
+    ev[i].code                        = KEY_RIGHTSHIFT;
     ev[i].value                       = 1;
     i += 2; // i+1: SYN_REPORT (zero-init)
     for (int k = 0; k < soChu; ++k) {
@@ -108,7 +111,7 @@ void UinputDevice::send_select(int soChu) {
         i += 2;
     }
     ev[i].type  = EV_KEY;
-    ev[i].code  = KEY_LEFTSHIFT;
+    ev[i].code  = KEY_RIGHTSHIFT;
     ev[i].value = 0;
     i += 2;
     write(guard_.get(), ev.data(), ev.size() * sizeof(struct input_event));

@@ -97,8 +97,10 @@ Bật bằng `MessengerSelectOvertype=True` (cần `WaitSurroundingEvent=True`).
   một chữ thì thấy ngay; gõ đè khi con trỏ đang lùi thì chữ chèn sai chỗ, rối và khó phát hiện.
 - **Phần bấm Shift+Mũi tên nằm ở máy chủ nền**, nên cài gói mới phải khởi động lại
   `fcitx5-lotus-server@<user>`. Tắt công tắc trên thì quay về cách chờ theo đồng hồ.
+- **Bấm Shift phải, không phải Shift trái (23/09).** fcitx5 mặc định coi chạm Shift trái một mình là
+  chuyển sang tiếng Anh, và bản đầu dùng Shift trái thỉnh thoảng làm bộ gõ rơi về tiếng Anh giữa lúc gõ.
 
-Chưa đo Firefox và Chrome. Đã báo cách khắc phục ở #267 (bản chờ theo đồng hồ), chưa gửi mã.
+Chưa đo Firefox và Chrome. Đã báo cả hai cách ở #267, chưa gửi mã.
 
 ### Sửa lỗi gặp thật
 

@@ -565,7 +565,7 @@ kịch bản chỉ gõ khi trang đang được chọn) chưa đưa vào workben
 dài (`anchor` lệch `cursor` đúng N), rồi `commitString` đè lên vùng chọn.
 
 **Vá:**
-- Máy chủ uinput nhận **số âm** trên cùng socket = bôi đen |n| chữ: giữ `KEY_LEFTSHIFT`, bắn `KEY_LEFT`
+- Máy chủ uinput nhận **số âm** trên cùng socket = bôi đen |n| chữ: giữ `KEY_RIGHTSHIFT` (Shift phải, xem dưới), bắn `KEY_LEFT`
   n lần, nhả Shift, tất cả trong một lần ghi. Phải đăng ký thêm hai mã phím đó với `UI_SET_KEYBIT`.
 - Addon: `MessengerSelectOvertype` (mặc định tắt), chỉ áp cho ô có hình ô soạn tin Messenger.
 - Phím Shift+Left do chính mình bắn quay lại fcitx: phải `forward()` thẳng tới ứng dụng và KHÔNG được
@@ -597,6 +597,24 @@ xoá. ctest 21/21.
 **Cài đặt:** phần bôi đen nằm ở máy chủ nền, nên gói mới phải kèm khởi động lại
 `fcitx5-lotus-server@<user>`. Addon mới nói chuyện với máy chủ cũ thì số âm bị hiểu sai (máy chủ cũ bắn
 một phím xoá lạc); addon cũ với máy chủ mới thì không sao.
+
+**Shift phải, không phải Shift trái (23/09).** Bản đầu giữ Shift trái. Dùng thật thì thỉnh thoảng đang
+gõ trong ô Messenger, bộ gõ tự rơi về tiếng Anh, phải bấm phím tắt bật lại. Nguyên nhân: fcitx5 mặc định
+có `AltTriggerKeys=Shift_L` — thấy Shift trái nhấn rồi nhả mà ở giữa không có phím nào khác thì chuyển
+tạm sang bộ gõ đầu tiên (`keyboard-us`). Mã fcitx5 5.1.22 (`instance.cpp`, watcher pha `InputMethod`)
+chỉ không chuyển nếu nó thấy phím mũi tên ở giữa; nghi có lúc mũi tên không đi qua fcitx5 (chưa tái
+hiện được theo ý muốn). Shift phải không nằm trong danh sách phím chuyển mặc định nên không thể dính,
+bất kể mũi tên đi đường nào. Người đã tự đặt Shift phải làm phím chuyển thì vẫn dính.
+
+Đối chứng trên máy (bàn phím ảo, ô soạn tin Messenger trên Edge đang được chọn): chạm Shift trái một
+mình ⇒ trạng thái 2 → 1 (rơi về tiếng Anh); chạm Shift phải ⇒ 2 → 2. Lần đầu chạy khi không ô nào được
+chọn thì cả hai đều 2 → 2 — phép thử mù, không tính. Máy gõ 50 câu với máy chủ Shift phải: bôi đen xác
+nhận 659/660 lần, bộ gõ ở tiếng Việt suốt lượt; sai 1/50 do lỗi còn mở dưới đây, không do Shift.
+
+**Còn mở — hết hạn thì vứt phím gõ trong lúc chờ.** Đo 23/09, câu 32: Facebook chậm tới mức chữ `c` vừa
+gõ chưa hiện, ô không báo vùng chọn trong 150 ms ⇒ đường lùi bỏ lần thêm dấu (`đươc`, đúng thiết kế),
+nhưng `boHanBoiDen()` xoá luôn `buffered_keys_` nên dấu cách gõ trong 150 ms đó mất theo (`đươcđêm`).
+Lượt 20/09 không có lần chạm hạn nào nên chưa lộ.
 
 **Upstream:** đã báo cách khắc phục ở #267 (17/09; cập nhật 19/09: nguyên nhân (3) và (4), đề xuất 60 ms; fork tự dùng 40 ms giữa câu, 60 ms từ đầu), chưa gửi mã.
 
