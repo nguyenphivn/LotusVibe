@@ -202,7 +202,10 @@ kiểu NOT_PLANNED.
 thuần. App Wayland luôn khai có surrounding text nên không bao giờ đi vào nhánh này. Phải đo
 trên app qua XWayland mới thấy. Đừng lặp lại lỗi đó.
 
-### `5fa19be` — nhật ký xả đĩa mỗi dòng, không chỉ khi có cảnh báo
+### ĐÃ THAY BẰNG BẢN GỐC — `5fa19be` nhật ký xả đĩa mỗi dòng, không chỉ khi có cảnh báo
+
+**24/09/2026:** bản gốc bỏ hẳn tệp nhật ký, máy chủ ghi qua `syslog()` (`744201d`); fork lấy theo nên
+vá này không còn. Phần dưới giữ làm lịch sử.
 
 **Nguyên nhân:** bản gốc chỉ xả đĩa khi mức log từ WARN trở lên. Mọi dòng quan trọng lúc khởi
 động đều là mức INFO, nên nhật ký đứng yên trong khi máy chủ vẫn chạy bình thường. Người đọc
@@ -414,6 +417,8 @@ nên sự kiện nằm đó tới lần có phím kế tiếp. Lộ ra lúc làm
 với tính năng bấm chuột ngắt từ thì cú bấm bị xử lý trễ.
 
 **Vá:** rút hàng vô điều kiện ngay sau `libinput_dispatch()`.
+
+**Bản gốc đã tự vá y hệt** ngày 18/09 (`c43c02b`). Lần lấy 24/09 giữ bản của fork, nhặt commit đó ra rỗng.
 
 ### Chờ 4 ms mỗi phím xoá ở Smooth và Super Smooth, thay vì 2 (`ae9d213`)
 
@@ -724,6 +729,16 @@ Lần gom 16/09/2026, nền `79d5706`: vá bỏ X11 và mã vá icon đã vào b
 `#include` ở `lotus-engine.cpp` (giữ `lotus-plasma-theme.h`, bỏ `ack-apps.h`) và vá icon (lấy mã của
 bản gốc, giữ bài kiểm). Bài kiểm icon phải sửa theo hàm bản gốc đổi sang nhận `std::string`. Mã của bản
 dựng mới khớp 0 dòng khác với mã máy chủ đang cài và mô-đun đã đo trên iMac. Bộ kiểm 12/12.
+
+Lần lấy 24/09/2026 — **ngoại lệ, không dựng lại từ `dev`:** dựng từ `dev` sẽ kéo theo hai thứ chủ fork chọn
+bỏ: chế độ gõ mới *Uinput (Surrounding Text)* (`90beecd`, xoá luôn tuỳ chọn `useSurroundingTextIfPossible`
+mà vá LibreOffice đang dùng) và vá hoãn giao chữ cho GTK4 qua dbus (`2ca89a5`, đụng đúng chỗ giao chữ
+fork đã viết lại). Nên nhặt thẳng 11 commit của `dev` vào `ban-dung` bằng `cherry-pick -x`: đóng gói
+chạy bài kiểm, bản 3.5.10, nix, CI, dọn mã máy chủ, nhật ký qua `syslog()`, tài liệu musl, bỏ bộ
+chọn icon riêng. Commit rút hàng libinput ra rỗng (fork đã có). Hai chỗ xung đột: `lotus-logger.cpp`
+(lấy của bản gốc) và dòng `#include` ở `lotus-engine.cpp` (giữ `lotus-gnome-theme.h`, bỏ
+`lotus-icon-resolver.h` và `ack-apps.h`). Bộ kiểm 21/21. Lần gom sau vẫn phải quyết lại hai commit bỏ
+qua ở trên.
 
 Mã băm commit trong tệp này đổi theo mỗi lần gom; tìm theo tiêu đề commit nếu không khớp.
 

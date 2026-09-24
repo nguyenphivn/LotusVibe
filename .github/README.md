@@ -110,8 +110,6 @@ Chưa đo Firefox và Chrome. Đã báo cả hai cách ở #267, chưa gửi mã
   mọi ô khác. Chưa gửi lên bản gốc.
 - **Bỏ khoảng chờ vô ích ở app không có surrounding text.** Edge chạy qua XWayland: độ trễ trung vị
   12,8 → 6,9 ms. Bản gốc từ chối (#490).
-- **Nhật ký máy chủ ghi ra đĩa từng dòng**, để phân biệt được nhật ký cũ với máy chủ đã chết. Bản
-  gốc từ chối (#468).
 - **Chữ V hết màu đen trên panel tối của KDE** (issue #374, gặp ngay với giao diện mặc định Fedora
   44). Lotus đọc màu của panel thay vì màu cửa sổ ứng dụng. Chụp trước và sau trên máy thật: V đen
   thành V trắng. Mã sửa đã vào bản gốc (PR #497); bản này chỉ giữ thêm bài kiểm.
@@ -122,8 +120,6 @@ Chưa đo Firefox và Chrome. Đã báo cả hai cách ở #267, chưa gửi mã
   không phải máy chậm: LibreOffice xử lý phím xoá theo kiểu hẹn sau, còn chữ mới chèn ngay nên vượt
   mặt. Bản này xoá bằng surrounding text riêng cho LibreOffice. Đo trên Writer: 30–36/60 từ sai →
   0/60; Calc, Impress 0/60. Đã báo ở #162, chưa gửi mã.
-- **Máy chủ không bỏ sót sự kiện libinput** khi đang gửi phím xoá, nên cú bấm chuột ngắt từ không bị
-  xử lý trễ. Đã báo ở #507, chưa gửi mã.
 - **Gõ được Messenger trên Facebook với chế độ uinput** — bốn nguyên nhân và cách chữa ở
   [mục trên](#messenger-trên-facebook-bôi-đen-rồi-gõ-đè-thay-vì-xoá-rồi-gõ-2009).
 - **Chờ 4 ms mỗi phím xoá thay vì 2** ở Smooth và Super Smooth. Máy tải nặng: 2 ms đúng 39–46/60
