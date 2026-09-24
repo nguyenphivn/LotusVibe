@@ -89,12 +89,12 @@ thêm Lotus. Trên KDE Wayland: System Settings → Virtual Keyboard → chọn 
 trong cửa sổ cài đặt Lotus), rồi khởi động lại fcitx5:
 
 ```
-firefox=3
-microsoft-edge=3
-Alacritty=3
+firefox=2
+microsoft-edge=2
+Alacritty=2
 ```
 
-Luật `firefox=3` chỉ an toàn trên bản này, vì cần vá lá chắn thanh địa chỉ ở nhóm E. Lá chắn nhận
+Luật `firefox=2` chỉ an toàn trên bản này, vì cần vá lá chắn thanh địa chỉ ở nhóm E. Lá chắn nhận
 Firefox theo tên chương trình: bản Firefox mang tên khác (LibreWolf, Firefox Developer Edition)
 **chưa** được nhận. Trình duyệt họ Chromium khác (Chromium, Brave) tự khai ô địa chỉ giống Edge nên
 nhiều khả năng chạy, nhưng **chưa đo**.
