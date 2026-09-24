@@ -108,15 +108,11 @@ Không có mã hoặc không mở được: UniLume (không có mã, chuyển th
 - **vietc, vnkey, telebit:** một đường surrounding text hoặc chữ tạm, không có cơ chế chống mất chữ
   gì khác đáng kể.
 
-## Việc LotusVibe có thể làm tiếp (chưa làm, xếp theo độ đáng thử)
+## Quyết định (24/09)
 
-1. **Chốt giữ phím kế tiếp** kiểu Unikey-Wayland-Final: khi đang chờ ô xác nhận một lần thay chữ, xếp
-   hàng các phím sau thay vì xử lý luôn. Chữa được loại lỗi "phím sau chen vào giữa".
-2. **Xếp loại ô theo hành vi** kiểu Funput: ô nào đã một lần bỏ lệnh xoá thì nhớ lại, lần sau đi
-   đường an toàn (bôi đen gõ đè hoặc chữ tạm). Thay dần cách nhận diện theo hình ô (`\n\n`).
-3. **Đo kế hoạch gõ thẳng chữ Việt** trên máy khác, có sửa theo bài học vi-ime: thử thêm mức 3–8 trên
-   phím chữ thường thay vì chỉ F13+.
-4. **Chữ tạm không gạch chân** làm đường dự phòng: thử xem Edge/Firefox/Kate có bỏ gạch chân thật không.
+Chỉ đi tiếp hướng **gõ thẳng chữ Việt bằng bàn phím ảo** (học từ vi-ime). Bài học của vi-ime đã ghi
+vào kế hoạch ở workbench, `probes/phim-truc-tiep/KE-HOACH.md`, mục "Bài học từ vi-ime". Các ý khác
+(giữ phím kế tiếp, nhớ ô hay mất chữ, chữ tạm không gạch chân) chủ fork quyết định không làm.
 
 ## Các commit đã đọc
 
