@@ -33,6 +33,7 @@ function(add_lotus_headless_test target source labels)
     target_compile_definitions(${target} PRIVATE
         FCITX5_LOTUS_SETTINGS_PATH="${CMAKE_INSTALL_FULL_BINDIR}/fcitx5-lotus-settings"
         FCITX_LOTUS_ICON_DIR="${CMAKE_INSTALL_FULL_DATADIR}/icons/hicolor/scalable/apps"
+        LOTUS_TEST_DICTIONARY="${PROJECT_SOURCE_DIR}/data/dictionaries/vietnamese.cm.dict"
     )
     target_link_libraries(${target} PRIVATE
         Fcitx5::Core

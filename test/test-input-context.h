@@ -167,6 +167,13 @@ inline void configureTestPaths(const char* name) {
     setenv("XDG_CONFIG_HOME", (root / "config").c_str(), 1);
     setenv("XDG_DATA_HOME", (root / "data").c_str(), 1);
     setenv("XDG_CACHE_HOME", (root / "cache").c_str(), 1);
+    // The engine spell-checks against lotus/vietnamese.cm.dict from the data dirs. Without a copy here
+    // it falls back to the one the host happens to have installed: a clean build box has none, so a
+    // valid word like "chư" is restored to "uw" on space and tests pass on a dev machine but fail in
+    // the package %check (24/09: 5/5 red without the file, 5/5 green with it, same build).
+    // Copy the source tree's dictionary so every run spell-checks against the code under test.
+    std::filesystem::create_directories(root / "data/fcitx5/lotus");
+    std::filesystem::copy_file(LOTUS_TEST_DICTIONARY, root / "data/fcitx5/lotus/vietnamese.cm.dict");
 }
 
 /**
