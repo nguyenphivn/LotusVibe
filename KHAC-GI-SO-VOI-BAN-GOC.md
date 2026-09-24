@@ -74,8 +74,13 @@ sudo udevadm control --reload-rules
 sudo udevadm trigger --subsystem-match=misc --subsystem-match=input
 sudo systemctl daemon-reload
 sudo systemctl enable --now fcitx5-lotus-server@$(whoami).service
+sudo systemctl restart fcitx5-lotus-server@$(whoami).service
 systemctl status fcitx5-lotus-server@$(whoami).service       # phải thấy active (running)
 ```
+
+Lệnh `restart` là bắt buộc nếu máy từng chạy Lotus: `enable --now` không đụng tới máy chủ đang chạy,
+nên máy chủ bản gốc cũ vẫn ở lại. Máy chủ đó không hiểu lệnh bôi đen của vá Messenger, xoá nhầm chữ
+rồi đếm sai số phím xoá ở mọi ứng dụng. Mỗi lần cập nhật bản fork cũng chạy lại lệnh `restart` này.
 
 **5. Thêm bộ gõ.** Khởi động lại fcitx5 (hoặc đăng xuất rồi vào lại), mở "Fcitx5 Configuration" và
 thêm Lotus. Trên KDE Wayland: System Settings → Virtual Keyboard → chọn "Fcitx 5".

@@ -18,6 +18,9 @@ Trang này chỉ ghi **những gì khác với bản gốc**. Hướng dẫn dù
 - **Vá Messenger (20/09): Messenger trên Facebook hết mất chữ** — bộ gõ bôi đen chữ cần bỏ bằng
   Shift+Mũi tên trái rồi gõ đè, thay vì xoá trước rồi gõ sau. Đo 861 lần thay chữ, 0 lần mất.
   [Xem bên dưới](#messenger-trên-facebook-bôi-đen-rồi-gõ-đè-thay-vì-xoá-rồi-gõ-2009).
+- **Cài hoặc cập nhật xong phải khởi động lại máy chủ nền:**
+  `sudo systemctl restart fcitx5-lotus-server@$(whoami).service`, rồi khởi động lại fcitx5.
+  [Vì sao](#cài).
 - **Nhánh để dùng:** `ban-dung` (nhánh mặc định) = `dev` của bản gốc + 23 miếng vá.
 - **Chi tiết từng vá, số đo, tác giả gốc trả lời ra sao, và hướng dẫn cài:**
   [KHAC-GI-SO-VOI-BAN-GOC.md](https://github.com/nguyenphivn/LotusVibe/blob/ban-dung/KHAC-GI-SO-VOI-BAN-GOC.md)
@@ -159,3 +162,15 @@ Cả hai nằm ở [PR #492](https://github.com/LotusInputMethod/fcitx5-lotus/pu
 Làm theo mục
 [Cài sang máy khác](https://github.com/nguyenphivn/LotusVibe/blob/ban-dung/KHAC-GI-SO-VOI-BAN-GOC.md#cài-sang-máy-khác).
 Nhớ gỡ bản Lotus đóng gói sẵn trước, và cài vào `/usr`.
+
+**Cài xong, hoặc mỗi lần cập nhật, phải khởi động lại máy chủ nền** (chương trình chạy ngầm bấm
+phím xoá thay bộ gõ), rồi khởi động lại fcitx5:
+
+```
+sudo systemctl restart fcitx5-lotus-server@$(whoami).service
+fcitx5 -rd
+```
+
+Cài gói mới chỉ thay tệp trên đĩa. Máy chủ đang chạy vẫn là bản cũ cho tới khi khởi động lại. Bản
+fork thêm lệnh bôi đen cho vá Messenger; máy chủ bản gốc không hiểu lệnh này, nó xoá nhầm một chữ
+rồi đếm sai số phím xoá, làm chữ bị sai ở mọi ứng dụng cho tới khi khởi động lại.
