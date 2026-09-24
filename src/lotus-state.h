@@ -90,10 +90,10 @@ namespace fcitx {
         friend class LotusEngine;
 
         /**
-         * @brief v13: giao nốt chữ đang treo khi ô nhập sắp mất tiêu điểm.
-         * Không có nó thì đồng hồ hết hạn sau đó thấy is_deleting_ đã tắt và lặng lẽ bỏ chữ.
+         * @brief Commits text still waiting for the app before the input context loses focus.
+         * Without it, a timer firing later sees is_deleting_ cleared and silently drops the text.
          */
-        void xaChoDangCho();
+        void flushPendingReplacement();
 
       private:
         static constexpr size_t MAX_BUFFERED_KEYS = 50;
@@ -136,50 +136,55 @@ namespace fcitx {
          */
         void send_backspace_uinput(int count) const;
 
-        // Chờ theo sự kiện thay vì ngủ (xem handleUInputKeyPress)
-        std::unique_ptr<HandlerTableEntry<EventHandler>> cho_surr_watcher_;
+        // --- Super Smooth: wait for the app instead of sleeping (see handleUInputKeyPress) ---
+        std::unique_ptr<HandlerTableEntry<EventHandler>> surr_wait_watcher_;
+        std::unique_ptr<EventSourceTime>                 surr_wait_timer_;
+        uint64_t                                         surr_wait_started_at_    = 0;
+        uint64_t                                         surr_wait_deliver_at_    = 0; ///< planned commit time, CLOCK_MONOTONIC us
+        bool                                             surr_wait_pending_       = false;
+        bool                                             surr_wait_timer_only_    = false; ///< waiting on a plain timer that replaces sleep_for
+        int                                              surr_wait_focus_retries_ = 0;     ///< timer fired while the field had lost focus
+        std::string                                      surr_wait_prefix_;                ///< part of the word kept after deletion
+        std::string                                      surr_wait_deleted_;               ///< part that must disappear
+        std::string                                      surr_wait_sent_snapshot_;         ///< "text\x1fcursor" when the backspaces were sent
+        int                                              surr_wait_event_count_         = 0;
+        bool                                             surr_wait_saw_other_snapshot_  = false; ///< an event differed from the send-time snapshot
+        bool                                             surr_wait_sent_snapshot_fresh_ = false; ///< send-time snapshot still showed the text to delete
 
-        // Bôi đen rồi gõ đè: gửi Shift+Left cho đủ số chữ cần bỏ, chờ ảnh báo vùng chọn đúng độ dài
-        // rồi commit đè lên. Ô không bao giờ trống nên Messenger không nạp lại dòng gợi ý.
-        void                                             send_select_uinput(int soChu) const; // gửi số âm: máy chủ hiểu là bôi đen
-        void                                             boiDenRoiGoDe(const std::string& addedPart, int soChu);
-        void                                             ketThucBoiDen(const char* ly_do, bool tu_timer);
-        void                                             boHanBoiDen();
-        std::unique_ptr<HandlerTableEntry<EventHandler>> boi_watcher_;
-        std::unique_ptr<EventSourceTime>                 boi_timer_;
-        bool                                             boi_dang_cho_ = false;
-        unsigned int                                     boi_con_tro_  = 0; // vị trí con trỏ trước khi bôi
-        bool                                             boi_co_anh_   = false;
-        int                                              boi_so_chu_   = 0;
-        uint64_t                                         boi_bat_dau_  = 0;
-        std::unique_ptr<EventSourceTime>                 cho_surr_timer_;
-        uint64_t                                         cho_surr_bat_dau_ = 0;
-        uint64_t                                         cho_moc_giao_     = 0; // B33: lúc hẹn giao chữ (CLOCK_MONOTONIC, µs)
-        bool                                             cho_dang_cho_     = false;
-        std::string                                      cho_prefix_;      // phần từ giữ lại sau khi xoá
-        std::string                                      cho_deleted_;     // phần phải biến mất
-        std::string                                      cho_anh_luc_gui_; // ảnh chụp lúc bắn phím xoá
-        // v11: ảnh ĐÓNG BĂNG = quá hạn mà mọi tin đều y hệt ảnh lúc bắn (Edge thanh địa chỉ). Hai lần liền
-        // → bỏ chờ, ngủ 8 ms × phím xoá như Slow; cứ `probeEvery` lần thăm dò lại một lần.
-        int  cho_so_tin_              = 0;     // số tin trong lần chờ này
-        bool cho_tin_khac_            = false; // có tin nào khác ảnh lúc bắn
-        bool cho_anh_gui_cap_nhat_    = false; // v12: ảnh lúc bắn còn thấy phần sắp xoá
-        int  cho_dong_bang_lien_tiep_ = 0;
-        bool cho_dong_bang_           = false;
-        int  cho_dem_tham_do_         = 0;
-        int  cho_qua_han_lien_tiep_   = 0;     // v7: >=2 thì rút hạn chờ (Edge thanh địa chỉ không bao giờ khớp)
-        bool cho_anh_tin_cay_         = true;  // false sau một lần quá hạn, true lại khi có tin khớp
-        bool cho_hen_gio_             = false; // B33: đang chờ bằng hẹn giờ thay cho sleep_for (app không có ảnh ô)
-        int  cho_lan_doi_focus_       = 0;     // B33: số lần hẹn giờ nổ đúng lúc ô đang mất focus
-        bool oDaXoaXong() const;
+        // A snapshot is "frozen" when a wait times out and every event matched the send-time snapshot
+        // (Edge's address bar). After two in a row, stop waiting and sleep like Slow mode; probe again
+        // every WaitSurroundingProbeEvery replacements.
+        int  surr_frozen_streak_      = 0;
+        bool surr_frozen_             = false;
+        int  surr_frozen_probe_count_ = 0;
+        int  surr_timeout_streak_     = 0;    ///< two or more switches to the short timeout
+        bool surr_snapshot_trusted_   = true; ///< false after a timeout, true again on a matching event
+        bool deletionLooksDone() const;
 
-        // Messenger (facebook.com) vẽ lại ô soạn tin vài ms SAU khi ảnh đã báo xoá xong; chữ giao trước lần
-        // vẽ đó bị đè. Ảnh xoá xong ⇒ hẹn giao sau WaitSurroundingSettleMs (0 = giao ngay như cũ).
-        void                             giaoSauKhiLang(const char* ly_do, bool tu_timer);
-        std::unique_ptr<EventSourceTime> cho_lang_timer_;
-        const char*                      cho_ly_do_lang_ = "";
+        // Messenger repaints its composer a few ms after the snapshot shows the deletion done, and
+        // text committed before that repaint is overwritten. Delay the commit by
+        // WaitSurroundingSettleMs (0 = commit immediately).
+        void                             deliverAfterSettle(const char* reason, bool fromTimer);
+        std::unique_ptr<EventSourceTime> settle_timer_;
+        const char*                      settle_reason_ = "";
 
-        void                             ketThucThayChu(const char* ly_do, bool tu_timer);
+        void                             finishReplacement(const char* reason, bool fromTimer);
+
+        // --- Select and overtype (Facebook composers) ---
+        // Select the chars to replace with Shift+Left, wait until the snapshot reports a selection of
+        // that length, then commit over it. The field never becomes empty, so Messenger does not reload
+        // its placeholder.
+        void                                             send_select_uinput(int charCount) const; // sent as a negative count
+        void                                             selectAndOvertype(const std::string& addedPart, int charCount);
+        void                                             finishOvertype(const char* reason, bool fromTimer);
+        void                                             abandonOvertype();
+        std::unique_ptr<HandlerTableEntry<EventHandler>> overtype_watcher_;
+        std::unique_ptr<EventSourceTime>                 overtype_timer_;
+        bool                                             overtype_pending_       = false;
+        unsigned int                                     overtype_cursor_before_ = 0;
+        bool                                             overtype_had_snapshot_  = false;
+        int                                              overtype_char_count_    = 0;
+        uint64_t                                         overtype_started_at_    = 0;
 
         /**
          * @brief Checks if autofill is certain for surrounding text.

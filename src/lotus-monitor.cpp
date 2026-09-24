@@ -21,10 +21,10 @@
 #include <unistd.h>
 #include <limits.h>
 
-// Đường dẫn máy chủ do CMake truyền vào (giống FCITX5_LOTUS_SETTINGS_PATH). Viết cứng
-// "/usr/bin/..." thì mọi bản cài ngoài tiền tố mặc định — bản dựng tại chỗ, /usr/local,
-// Nix, distro dùng bindir khác — đều bị TỪ CHỐI im lặng: addon nối lại mỗi giây mãi mãi
-// và tính năng "bấm chuột thì ngắt từ đang gõ" chết mà không có dấu hiệu gì ở giao diện.
+// Server path passed in by CMake (like FCITX5_LOTUS_SETTINGS_PATH). A hard-coded "/usr/bin/..."
+// silently rejects every install outside the default prefix (local builds, /usr/local, Nix,
+// distros with another bindir): the addon reconnects every second forever and "reset the word on
+// mouse click" stops working with no visible sign.
 #ifndef FCITX5_LOTUS_SERVER_PATH
 #define FCITX5_LOTUS_SERVER_PATH "/usr/bin/fcitx5-lotus-server"
 #endif
@@ -60,15 +60,15 @@ static bool authenticateMouseSocketPeer(int sock, std::string& out_exe_path) {
 
     out_exe_path = exe_path;
 
-    // Cặp addon + máy chủ chạy riêng (LOTUS_SOCKET_NAMESPACE) nằm ngoài mọi tiền tố cài đặt,
-    // nên đường dẫn CMake truyền vào không khớp. Biến này chỉ đọc từ môi trường của chính
-    // addon — tức phiên của người dùng — và socket vốn đã riêng theo người dùng, nên nó
-    // không mở thêm cửa nào cho tiến trình của người khác.
-    const char* mong = std::getenv("LOTUS_SERVER_PATH");
-    if (mong == nullptr || *mong == '\0') {
-        mong = FCITX5_LOTUS_SERVER_PATH;
+    // A private addon + server pair (LOTUS_SOCKET_NAMESPACE, used by tests) lives outside any install
+    // prefix, so the CMake path does not match. The variable is read only from the addon's own
+    // environment, i.e. the user's session, and the socket is already per-user, so it opens nothing
+    // to other users' processes.
+    const char* expected = std::getenv("LOTUS_SERVER_PATH");
+    if (expected == nullptr || *expected == '\0') {
+        expected = FCITX5_LOTUS_SERVER_PATH;
     }
-    return strcmp(exe_path, mong) == 0;
+    return strcmp(exe_path, expected) == 0;
 }
 
 void mousePressResetThread() {

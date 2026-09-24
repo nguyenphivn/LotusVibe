@@ -136,12 +136,12 @@ namespace fcitx {
     }
 
     namespace {
-        // Thanh địa chỉ Firefox không khai CapabilityFlag::Url, và báo cho bộ gõ là KHÔNG bôi đen
-        // phần tự điền dù trên màn hình có tô (đo 13/09/2026: cursor == anchor, 11-25 ký tự sau con
-        // trỏ). Nhận ra nó theo hình dạng: sau con trỏ có chữ, không xuống dòng, và toàn ký tự của
-        // địa chỉ web. Trình soạn thảo web (Lark) giữ ký tự vô hình sau con trỏ nên bị loại; bản
-        // chỉ cấm khoảng trắng từng bắn nhầm lá chắn trong Lark.
-        bool kyTuDiaChiWeb(uint32_t c) {
+        // Firefox's address bar does not set CapabilityFlag::Url and reports its autofill suffix as
+        // unselected even though it is highlighted on screen (cursor == anchor, 11-25 chars after the
+        // cursor). Recognise it by shape instead: single line, and everything after the cursor is a
+        // URL character. Checking only for "no whitespace" misfired in web editors (Lark) that keep
+        // invisible characters after the cursor.
+        bool isUrlChar(uint32_t c) {
             if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
                 return true;
             }
@@ -173,35 +173,35 @@ namespace fcitx {
             }
         }
 
-        bool chuSauGiongDuoiUrl(const SurroundingText& s) {
+        bool textAfterCursorLooksLikeUrl(const SurroundingText& s) {
             if (!s.isValid() || s.cursor() != s.anchor()) {
                 return false;
             }
-            const unsigned tro = s.cursor();
-            unsigned       i   = 0;
-            size_t         sau = 0;
+            const unsigned cursor = s.cursor();
+            unsigned       i      = 0;
+            size_t         after  = 0;
             for (uint32_t c : fcitx::utf8::MakeUTF8CharRange(s.text())) {
                 if (c == U'\n') {
                     return false;
                 }
-                if (i >= tro) {
-                    if (!kyTuDiaChiWeb(c)) {
+                if (i >= cursor) {
+                    if (!isUrlChar(c)) {
                         return false;
                     }
-                    ++sau;
+                    ++after;
                 }
                 ++i;
             }
-            return sau > 0;
+            return after > 0;
         }
     } // namespace
 
     namespace {
-        // Phần trước con trỏ đúng bằng chữ đang gõ, tức chữ nằm ngay đầu ô. Ở đó một phím xoá thừa
-        // rơi vào đầu ô và không xoá gì, nên lá chắn đoán sai cũng vô hại. Không dùng realtextLen:
-        // đo 13/09/2026 nó giữ độ dài của lần gõ trước sau khi xoá trắng thanh địa chỉ Firefox, làm
-        // isAutofillCertain trượt ở 5/6 lần lặp.
-        bool truocTroChiCoTuDangGo(const SurroundingText& s, const std::string& buff) {
+        // The text before the cursor is exactly the word being typed, i.e. the word starts the field.
+        // An extra backspace there hits the start of the field and deletes nothing, so a wrong
+        // autofill guess is harmless. realtextLen is not usable here: after clearing Firefox's address
+        // bar it still holds the previous input's length, which made isAutofillCertain miss 5 of 6 runs.
+        bool onlyCurrentWordBeforeCursor(const SurroundingText& s, const std::string& buff) {
             if (!s.isValid() || buff.empty() || s.cursor() != utf8::length(buff)) {
                 return false;
             }
@@ -506,22 +506,23 @@ namespace fcitx {
         ic_->updateUserInterface(UserInterfaceComponent::InputPanel);
     }
 
-    bool LotusState::oDaXoaXong() const {
+    bool LotusState::deletionLooksDone() const {
         const auto& s = ic_->surroundingText();
         if (!s.isValid()) {
             return false;
         }
         const std::string& t = s.text();
-        // v4: ảnh y hệt ảnh lúc bắn phím xoá thì chưa thể là "xoá xong" — ở nhịp 20 ms ảnh cũ tụt
-        // lại hai phím trông giống hệt trạng thái sau khi xoá (đo được: 'đươợ').
-        if (!cho_anh_luc_gui_.empty() && t + "\x1f" + std::to_string(s.cursor()) == cho_anh_luc_gui_) {
-            // v8: ở 5 ms ảnh lúc bắn LUÔN chậm một phím nên trông y hệt trạng thái xong, và Firefox không
-            // gửi trạng thái trung gian — đo được 37/52 lần quá hạn là tin đúng bị gạt, mỗi lần 200 ms.
-            // Nội dung không phân biệt được; dùng thời gian: đã chờ đủ ngưỡng Slow (8 ms × phím xoá,
-            // đo 60/60) thì giao không kém an toàn hơn Slow. Kiểm "ngay" (0 ms) vẫn bị chặn như v4.
-            const auto da_cho    = (::fcitx::now(CLOCK_MONOTONIC) - cho_surr_bat_dau_) / 1000;
-            const auto toi_thieu = static_cast<uint64_t>(engine_->config().waitSurroundingMinPerKeyMs.value()) * static_cast<uint64_t>(std::max(expected_backspaces_, 1));
-            if (da_cho < toi_thieu) {
+        // A snapshot identical to the one taken when the backspaces were sent cannot mean "done" by
+        // content alone: when the app lags by a couple of keys, the stale snapshot looks exactly like
+        // the finished state.
+        if (!surr_wait_sent_snapshot_.empty() && t + "\x1f" + std::to_string(s.cursor()) == surr_wait_sent_snapshot_) {
+            // At fast typing speeds the send-time snapshot is always one key behind and Firefox sends no
+            // intermediate state, so rejecting it outright turned 37 of 52 timeouts into 200 ms stalls.
+            // Accept it once we have waited as long as Slow mode would (8 ms per backspace), which is no
+            // less safe than Slow. The immediate (0 ms) check still rejects it.
+            const auto waited  = (::fcitx::now(CLOCK_MONOTONIC) - surr_wait_started_at_) / 1000;
+            const auto minimum = static_cast<uint64_t>(engine_->config().waitSurroundingMinPerKeyMs.value()) * static_cast<uint64_t>(std::max(expected_backspaces_, 1));
+            if (waited < minimum) {
                 return false;
             }
         }
@@ -531,53 +532,54 @@ namespace fcitx {
         }
         const std::string before(t.begin(), it);
         auto              endsWith = [](const std::string& a, const std::string& b) { return a.size() >= b.size() && a.compare(a.size() - b.size(), b.size(), b) == 0; };
-        if (!cho_deleted_.empty() && endsWith(before, cho_prefix_ + cho_deleted_)) {
-            return false; // ảnh cũ: phần cần xoá vẫn còn
+        if (!surr_wait_deleted_.empty() && endsWith(before, surr_wait_prefix_ + surr_wait_deleted_)) {
+            return false; // stale snapshot: the text to delete is still there
         }
-        // Messenger trên Edge (Wayland) báo hai nhịp cho một phím xoá: con trỏ lùi trước, chữ trong ô
-        // xoá sau ('tie\n\n' con trỏ 2, rồi mới 'ti\n\n'). Chỉ nhìn phần trước con trỏ thì ảnh nửa vời
-        // trông như đã xoá xong; giao chữ lúc đó bị trang vứt, phím xoá lượt sau ăn vào chữ thật
-        // ('tieengs vieetj' → 'iếngiệt', đo 17/09: 3/3 lần giao trên ảnh nửa vời mất chữ, 3/3 trên ảnh
-        // khớp vào đủ). Xoá từ hai chữ trở lên thì con trỏ còn có thể đứng GIỮA phần cần xoá ('do\n\n' con
-        // trỏ 1 khi xoá 'do'; log 19/09: 4/4 lần giao trên ảnh đó mất chữ, vì chỉ so chữ đầu). Trước con
-        // trỏ là phần đầu + k chữ đầu của phần cần xoá, sau con trỏ là chữ thứ k ⇒ ảnh chưa xong, chờ tiếp.
-        if (!cho_deleted_.empty() && it != t.end()) {
-            const std::string chuSau(it, utf8::nextChar(it));
-            std::string       daQua = cho_prefix_;
-            for (auto d = cho_deleted_.begin(); d != cho_deleted_.end();) {
-                const auto hetD = utf8::nextChar(d);
-                if (chuSau == std::string(d, hetD) && endsWith(before, daQua)) {
+        // Messenger on Edge (Wayland) reports each backspace twice: the cursor moves first, the text
+        // is removed a few ms later ('tie\n\n' cursor 2, then 'ti\n\n'). Looking only before the
+        // cursor, the half-updated snapshot seems done; committing then gets dropped by the page and
+        // the next replacement's backspaces eat real text ('tieengs vieetj' -> 'iếngiệt'). When more
+        // than one char is deleted the cursor can also sit inside the deleted part ('do\n\n' cursor 1
+        // while deleting 'do'). If the text before the cursor is prefix + the first k deleted chars and
+        // the char after the cursor is deleted char k, the deletion is still in progress (#267).
+        if (!surr_wait_deleted_.empty() && it != t.end()) {
+            const std::string charAfter(it, utf8::nextChar(it));
+            std::string       passed = surr_wait_prefix_;
+            for (auto d = surr_wait_deleted_.begin(); d != surr_wait_deleted_.end();) {
+                const auto next = utf8::nextChar(d);
+                if (charAfter == std::string(d, next) && endsWith(before, passed)) {
                     return false;
                 }
-                daQua.append(d, hetD);
-                d = hetD;
+                passed.append(d, next);
+                d = next;
             }
         }
-        return endsWith(before, cho_prefix_);
+        return endsWith(before, surr_wait_prefix_);
     }
 
-    // v13: đường chờ sự kiện trả vòng lặp về NGAY, nên người dùng kịp đổi cửa sổ trong lúc chữ
-    // còn treo. deactivate() tắt is_deleting_ ⇒ đồng hồ nổ sau đó thấy cờ tắt là bỏ chữ không một
-    // lời (đo được: thanh địa chỉ Edge còn 't' đáng lẽ 'tô'). Đường ngủ cũ không có khe này vì nó
-    // ngủ ngay trong hàm xử lý phím. Giao nốt trước khi rời ô.
-    void LotusState::xaChoDangCho() {
-        if (!cho_dang_cho_) {
+    // The event-driven wait returns to the event loop immediately, so the user can switch windows
+    // while a commit is still pending. deactivate() clears is_deleting_, and a timer firing after
+    // that would silently drop the text (Edge's address bar kept 't' instead of 'tô'). The old
+    // sleeping path had no such gap because it slept inside the key handler. Commit before leaving.
+    void LotusState::flushPendingReplacement() {
+        if (!surr_wait_pending_) {
             return;
         }
-        // B33: chờ hẹn giờ chỉ vài ms và giữ đúng khoảng mà bản sleep_for chờ để app kịp xoá; giao sớm
-        // ở đây là giao trước phím xoá. Mất focus ở đây gần như luôn là cú reset của Chromium X11 (vào
-        // lại ngay) ⇒ để đồng hồ tự giao; nó bỏ chữ nếu ô không quay lại.
-        if (cho_hen_gio_) {
+        // A timer-only wait lasts a few ms and stands in for the old sleep that gives the app time to
+        // apply the backspaces; committing early would land before them. Losing focus here is almost
+        // always Chromium X11 briefly resetting focus, so let the timer commit (it drops the text if
+        // the field does not come back).
+        if (surr_wait_timer_only_) {
             return;
         }
-        ketThucThayChu("mat tieu diem", false);
+        finishReplacement("focus lost", false);
     }
 
     namespace {
-        // Ô soạn tin Messenger (Edge) báo "\n\n" ngay sau con trỏ; xoá trống thì cả ảnh chỉ còn "\n". Log 17/09:
-        // 39/39 ảnh có "\n\n" đều đúng con trỏ đứng trước hai dấu xuống dòng cuối. Lỗi trang vẽ lại đè chữ chỉ
-        // đo được ở ô này, nên chỉ ô này chờ lắng; ô khác giao ngay như cũ.
-        bool giongOSoanTinMessenger(const SurroundingText& s) {
+        // The Messenger composer (Edge) reports "\n\n" right after the cursor; once emptied the whole
+        // snapshot is "\n". The page repaints and overwrites fresh text only in this field, so only
+        // this field waits to settle; other fields commit immediately.
+        bool looksLikeMessengerComposer(const SurroundingText& s) {
             if (!s.isValid()) {
                 return false;
             }
@@ -592,11 +594,11 @@ namespace fcitx {
             return std::string(it, t.end()) == "\n\n";
         }
 
-        // Mọi ô soạn của Facebook (tin nhắn Messenger, ô đăng bài) báo cả ô kết thúc bằng "\n\n", con trỏ ở
-        // đâu cũng vậy: log 24/09 ô đăng bài, 2787 ảnh con trỏ giữa đoạn và 2207 ảnh cuối đoạn, không ảnh nào
-        // khác. Sửa giữa đoạn thì sau con trỏ còn cả phần bài phía sau, nên hình "\n\n ngay sau con trỏ" không
-        // nhận ra ô này. Xoá hết thì cả ô chỉ còn "\n".
-        bool giongOSoanFacebook(const SurroundingText& s) {
+        // Every Facebook composer (Messenger message, post box) reports a whole-field text ending in
+        // "\n\n", wherever the cursor is (post box log: 2787 mid-text and 2207 end-of-text snapshots,
+        // no exception). When editing mid-text the rest of the post follows the cursor, so the
+        // "\n\n right after the cursor" test misses it. An emptied field is just "\n".
+        bool looksLikeFacebookComposer(const SurroundingText& s) {
             if (!s.isValid()) {
                 return false;
             }
@@ -604,75 +606,75 @@ namespace fcitx {
             return t == "\n" || (t.size() >= 2 && t.compare(t.size() - 2, 2, "\n\n") == 0);
         }
 
-        // Chưa có dấu cách hay xuống dòng trước con trỏ = đang gõ từ đầu tiên của tin nhắn.
-        bool laTuDauTin(const SurroundingText& s) {
+        // No space or newline before the cursor: the first word of the message is being typed.
+        bool isFirstWordOfMessage(const SurroundingText& s) {
             const std::string& t   = s.text();
-            auto               het = t.begin();
-            for (unsigned int i = 0; i < s.cursor() && het != t.end(); ++i) {
-                het = utf8::nextChar(het);
+            auto               end = t.begin();
+            for (unsigned int i = 0; i < s.cursor() && end != t.end(); ++i) {
+                end = utf8::nextChar(end);
             }
-            return std::find_if(t.begin(), het, [](char c) { return c == ' ' || c == '\n'; }) == het;
+            return std::find_if(t.begin(), end, [](char c) { return c == ' ' || c == '\n'; }) == end;
         }
     } // namespace
 
-    void LotusState::giaoSauKhiLang(const char* ly_do, bool tu_timer) {
-        const auto& anh     = ic_->surroundingText();
-        int         lang_ms = engine_->config().waitSurroundingSettleMs.value();
-        if (lang_ms <= 0 || !giongOSoanTinMessenger(anh)) {
-            ketThucThayChu(ly_do, tu_timer);
+    void LotusState::deliverAfterSettle(const char* reason, bool fromTimer) {
+        const auto& snapshot = ic_->surroundingText();
+        int         settleMs = engine_->config().waitSurroundingSettleMs.value();
+        if (settleMs <= 0 || !looksLikeMessengerComposer(snapshot)) {
+            finishReplacement(reason, fromTimer);
             return;
         }
-        // Ô soạn tin vừa trống còn đang nạp lại: từ đầu tiên mất 30/156 ở 20 ms, 4/100 ở 40, 0/100 ở 60
-        // (máy gõ tự động 19/09). Chỉ từ đầu chờ lâu, các từ sau giữ mức thường.
-        if (laTuDauTin(anh)) {
-            lang_ms = std::max(lang_ms, engine_->config().waitSurroundingSettleFirstWordMs.value());
+        // A just-emptied composer is still reloading its placeholder. Measured on the first word:
+        // 30/156 lost at 20 ms, 4/100 at 40 ms, 0/100 at 60 ms. Later words keep the normal wait.
+        if (isFirstWordOfMessage(snapshot)) {
+            settleMs = std::max(settleMs, engine_->config().waitSurroundingSettleFirstWordMs.value());
         }
-        // Dùng lại đúng trạng thái "chờ hẹn giờ" (B33): phím tới giữa chừng chờ nốt rồi giao, mất tiêu điểm
-        // thì để đồng hồ tự giao, người nghe ảnh và đồng hồ hạn chờ im lặng vì cho_hen_gio_.
-        cho_dang_cho_      = true; // nhánh "ngay" tới đây khi chưa bật cờ chờ
-        cho_hen_gio_       = true;
-        cho_lan_doi_focus_ = 0;
-        cho_ly_do_lang_    = ly_do;
-        cho_moc_giao_      = ::fcitx::now(CLOCK_MONOTONIC) + (static_cast<uint64_t>(lang_ms) * 1000ULL);
-        cho_lang_timer_    = engine_->instance()->eventLoop().addTimeEvent(CLOCK_MONOTONIC, cho_moc_giao_, 1000, [this](EventSourceTime*, uint64_t) {
-            if (!cho_dang_cho_ || !cho_hen_gio_ || !is_deleting_.load()) {
+        // Reuse the timer-only wait state: a key arriving mid-wait finishes the wait first, focus loss
+        // leaves the commit to the timer, and the snapshot watcher and timeout stay quiet.
+        surr_wait_pending_       = true; // the immediate path gets here without the flag set
+        surr_wait_timer_only_    = true;
+        surr_wait_focus_retries_ = 0;
+        settle_reason_           = reason;
+        surr_wait_deliver_at_    = ::fcitx::now(CLOCK_MONOTONIC) + (static_cast<uint64_t>(settleMs) * 1000ULL);
+        settle_timer_            = engine_->instance()->eventLoop().addTimeEvent(CLOCK_MONOTONIC, surr_wait_deliver_at_, 1000, [this](EventSourceTime*, uint64_t) {
+            if (!surr_wait_pending_ || !surr_wait_timer_only_ || !is_deleting_.load()) {
                 return false;
             }
-            ketThucThayChu(cho_ly_do_lang_, false);
+            finishReplacement(settle_reason_, false);
             return false;
         });
     }
 
-    void LotusState::ketThucThayChu(const char* ly_do, bool tu_timer) {
-        const auto tre_ms = (::fcitx::now(CLOCK_MONOTONIC) - cho_surr_bat_dau_) / 1000;
-        LOTUS_INFO("Surr wait " + std::string(ly_do) + " after " + std::to_string(tre_ms) + " ms");
-        if (std::string(ly_do) == "qua han") {
-            cho_anh_tin_cay_ = false;
-            ++cho_qua_han_lien_tiep_;
-            // v11: đòi ≥ 2 tin và KHÔNG tin nào khác ảnh lúc bắn — Firefox tụt thật thường im hẳn
-            // (0 tin) hoặc gửi ảnh đang nhích, không tính là đóng băng.
-            if (cho_so_tin_ >= 2 && !cho_tin_khac_ && cho_anh_gui_cap_nhat_) {
-                if (++cho_dong_bang_lien_tiep_ >= 2 && !cho_dong_bang_) {
-                    cho_dong_bang_   = true;
-                    cho_dem_tham_do_ = 0;
+    void LotusState::finishReplacement(const char* reason, bool fromTimer) {
+        const auto elapsedMs = (::fcitx::now(CLOCK_MONOTONIC) - surr_wait_started_at_) / 1000;
+        LOTUS_INFO("Surr wait " + std::string(reason) + " after " + std::to_string(elapsedMs) + " ms");
+        if (std::string(reason) == "timeout") {
+            surr_snapshot_trusted_ = false;
+            ++surr_timeout_streak_;
+            // Frozen means at least two events, all identical to the send-time snapshot. A Firefox that
+            // is merely lagging usually sends nothing or a snapshot that is still moving.
+            if (surr_wait_event_count_ >= 2 && !surr_wait_saw_other_snapshot_ && surr_wait_sent_snapshot_fresh_) {
+                if (++surr_frozen_streak_ >= 2 && !surr_frozen_) {
+                    surr_frozen_             = true;
+                    surr_frozen_probe_count_ = 0;
                     LOTUS_INFO("Surr frozen: stop waiting");
                 }
             } else {
-                cho_dong_bang_lien_tiep_ = 0;
+                surr_frozen_streak_ = 0;
             }
-        } else if (std::string(ly_do) == "su kien" || std::string(ly_do) == "nguong") {
-            cho_anh_tin_cay_         = true;
-            cho_qua_han_lien_tiep_   = 0;
-            cho_dong_bang_lien_tiep_ = 0;
-            if (cho_dong_bang_) {
-                cho_dong_bang_ = false;
+        } else if (std::string(reason) == "event" || std::string(reason) == "threshold") {
+            surr_snapshot_trusted_ = true;
+            surr_timeout_streak_   = 0;
+            surr_frozen_streak_    = 0;
+            if (surr_frozen_) {
+                surr_frozen_ = false;
                 LOTUS_INFO("Surr frozen: resume waiting");
             }
         }
-        cho_dang_cho_ = false;
-        cho_hen_gio_  = false;
-        if (!tu_timer && cho_surr_timer_) {
-            cho_surr_timer_.reset(); // không reset từ trong chính callback của nó
+        surr_wait_pending_    = false;
+        surr_wait_timer_only_ = false;
+        if (!fromTimer && surr_wait_timer_) {
+            surr_wait_timer_.reset(); // never reset a timer from inside its own callback
         }
         if (!pending_commit_string_.empty()) {
             ic_->commitString(pending_commit_string_);
@@ -694,230 +696,234 @@ namespace fcitx {
             if (current_backspace_count_ < expected_backspaces_) {
                 return false; // Allow intermediate backspaces to reach the app to clear autofill/old text.
             }
-            // v7: app khai "có surrounding text" nhưng gửi ảnh RỖNG (Konsole: valid=1 len=0 suốt) thì
-            // không tin nào khớp được, chờ chỉ tốn trọn hạn mỗi dấu → đi đường ngủ cũ ở dưới.
-            const bool anh_rong = ic_->surroundingText().text().empty();
-            if (engine_->config().waitSurroundingEvent.value() && anh_rong) {
+            // Some apps declare surrounding text but always send an empty snapshot (Konsole: valid,
+            // length 0). Nothing can ever match, so waiting would cost the full timeout per key; use the
+            // sleeping path below instead.
+            const bool emptySnapshot = ic_->surroundingText().text().empty();
+            if (engine_->config().waitSurroundingEvent.value() && emptySnapshot) {
                 LOTUS_INFO("Surr wait skip: empty snapshot");
             }
-            bool bo_cho_dong_bang = false;
-            if (engine_->config().waitSurroundingEvent.value() && !anh_rong && cho_dong_bang_) {
-                const int moi = std::max(engine_->config().waitSurroundingProbeEvery.value(), 1);
-                ++cho_dem_tham_do_;
-                if (cho_dem_tham_do_ % moi != 0) {
-                    bo_cho_dong_bang = true;
+            bool skipFrozenWait = false;
+            if (engine_->config().waitSurroundingEvent.value() && !emptySnapshot && surr_frozen_) {
+                const int probeEvery = std::max(engine_->config().waitSurroundingProbeEvery.value(), 1);
+                ++surr_frozen_probe_count_;
+                if (surr_frozen_probe_count_ % probeEvery != 0) {
+                    skipFrozenWait = true;
                 }
             }
-            if (engine_->config().waitSurroundingEvent.value() && !anh_rong && !bo_cho_dong_bang) {
-                // fcitx5 chỉ có MỘT vòng lặp sự kiện, nên ngủ + thử lại ở dưới
-                // không bao giờ thấy được tin "ô đã đổi" đến trong lúc ngủ. Ở đây trả vòng lặp
-                // về ngay, đăng ký nghe InputContextSurroundingTextUpdated ĐÚNG LÚC NÀY (v1 để
-                // người nghe cũ sống qua lần thay sau → bắt tin trễ của phím trước → giao sớm →
-                // 0/15). Kiểm bằng NỘI DUNG (oDaXoaXong), không dùng realtextLen. Quá hạn thì
-                // giao như cũ. Phím người gõ trong lúc chờ vẫn vào buffered_keys_.
+            if (engine_->config().waitSurroundingEvent.value() && !emptySnapshot && !skipFrozenWait) {
+                // fcitx5 has a single event loop, so sleeping and retrying below can never see a
+                // surrounding-text update that arrives during the sleep. Return to the loop instead and
+                // watch InputContextSurroundingTextUpdated from this moment on; a watcher that outlived
+                // the previous replacement caught that replacement's late events and committed too early.
+                // Decide by content (deletionLooksDone), not realtextLen. On timeout commit as before.
+                // Keys typed meanwhile still go to buffered_keys_.
                 event.filterAndAccept();
-                cho_surr_bat_dau_ = ::fcitx::now(CLOCK_MONOTONIC);
-                // v6: sau một lần quá hạn thì Firefox đang tụt lại, ảnh không đáng tin → bỏ kiểm ngay
-                if (cho_anh_tin_cay_ && oDaXoaXong()) {
+                surr_wait_started_at_ = ::fcitx::now(CLOCK_MONOTONIC);
+                // After a timeout the app is lagging (Firefox) and its snapshot is stale: skip the
+                // immediate check.
+                if (surr_snapshot_trusted_ && deletionLooksDone()) {
                     LOTUS_INFO("Skip retry");
-                    giaoSauKhiLang("ngay", false);
+                    deliverAfterSettle("immediate", false);
                     return true;
                 }
-                auto* instance = engine_->instance();
-                cho_dang_cho_  = true;
-                cho_so_tin_    = 0;
-                cho_tin_khac_  = false;
-                cho_surr_watcher_.reset(); // ngoài dispatch của nó, an toàn
-                cho_surr_watcher_ = instance->watchEvent(EventType::InputContextSurroundingTextUpdated, EventWatcherPhase::Default, [this](Event& e) {
+                auto* instance                = engine_->instance();
+                surr_wait_pending_            = true;
+                surr_wait_event_count_        = 0;
+                surr_wait_saw_other_snapshot_ = false;
+                surr_wait_watcher_.reset(); // safe: we are outside its dispatch
+                surr_wait_watcher_ = instance->watchEvent(EventType::InputContextSurroundingTextUpdated, EventWatcherPhase::Default, [this](Event& e) {
                     auto& ice = static_cast<InputContextEvent&>(e);
-                    if (!cho_dang_cho_ || cho_hen_gio_ || ice.inputContext() != ic_ || !is_deleting_.load()) {
+                    if (!surr_wait_pending_ || surr_wait_timer_only_ || ice.inputContext() != ic_ || !is_deleting_.load()) {
                         return;
                     }
-                    // v9: vừa quá hạn = app đang tụt, ảnh nó báo là bộ đệm cập nhật trễ ('trươnờ': tin
-                    // 0 ms hiện 'trư' là ảnh cũ vừa bắt kịp, không phải xoá xong). Lúc đó KHÔNG tin tin nào
-                    // tới trước ngưỡng Slow (8 ms × phím xoá).
-                    const auto da_cho_us = ::fcitx::now(CLOCK_MONOTONIC) - cho_surr_bat_dau_;
-                    const auto toi_thieu_us =
+                    // Right after a timeout the app is lagging, and an early event is its stale buffer
+                    // catching up, not the finished deletion ('trươnờ'). Ignore events that arrive before
+                    // the Slow-mode threshold (8 ms per backspace) in that state.
+                    const auto waitedUs = ::fcitx::now(CLOCK_MONOTONIC) - surr_wait_started_at_;
+                    const auto minimumUs =
                         static_cast<uint64_t>(engine_->config().waitSurroundingMinPerKeyMs.value()) * static_cast<uint64_t>(std::max(expected_backspaces_, 1)) * 1000ULL;
                     {
-                        const auto& sd0 = ic_->surroundingText();
-                        ++cho_so_tin_;
-                        if (sd0.text() + "\x1f" + std::to_string(sd0.cursor()) != cho_anh_luc_gui_) {
-                            cho_tin_khac_ = true;
+                        const auto& current = ic_->surroundingText();
+                        ++surr_wait_event_count_;
+                        if (current.text() + "\x1f" + std::to_string(current.cursor()) != surr_wait_sent_snapshot_) {
+                            surr_wait_saw_other_snapshot_ = true;
                         }
                     }
-                    if (!cho_anh_tin_cay_ && da_cho_us < toi_thieu_us) {
-                        // v9: vừa quá hạn xong thì tin tới sớm là bộ đệm cũ bắt kịp, không tin.
-                    } else if (oDaXoaXong()) {
-                        giaoSauKhiLang("su kien", false);
+                    if (!surr_snapshot_trusted_ && waitedUs < minimumUs) {
+                        // Stale buffer catching up after a timeout: ignore.
+                    } else if (deletionLooksDone()) {
+                        deliverAfterSettle("event", false);
                     }
-                    // Ảnh chưa khớp thì im lặng chờ tiếp: mọi thứ đáng in ở đây đều là chữ
-                    // người dùng vừa gõ, không đưa vào nhật ký.
+                    // Not done yet: keep waiting silently. Anything worth printing here is text the user
+                    // just typed, which must not go into the log.
                 });
-                // v7: hai lần quá hạn liên tiếp mà chưa có tin khớp = app này không cập nhật ảnh trong lúc
-                // xoá (Edge thanh địa chỉ: ảnh chỉ đổi khi gõ chữ thường) → rút hạn xuống mức ngắn, đủ
-                // trên cửa sổ vượt mặt (Slow 8 ms/phím đo 60/60); có tin khớp thì trả hạn dài lại.
-                const int  han_ms = cho_qua_han_lien_tiep_ >= 2 ? engine_->config().waitSurroundingShortMs.value() : engine_->config().waitSurroundingTimeoutMs.value();
-                const auto han    = static_cast<uint64_t>(han_ms) * 1000ULL;
-                // v7.1: accuracy 0 với sd-event = MẶC ĐỊNH 250 ms (đồng hồ được phép nổ muộn tới 250 ms):
-                // đo được: hạn 40 nổ ở 64, hạn 200 nổ ở 243, tệ nhất 430. Đặt 1 ms.
-                // v10: 16/27 lần quá hạn còn lại của v9 là tin "xong" tới TRƯỚC ngưỡng Slow rồi app im
-                // luôn → bị gạt và chờ trọn 200 ms. Đặt thêm một mốc đúng tại ngưỡng: kiểm lại ảnh mới nhất
-                // đã nhận, khớp thì giao ngay ("nguong"); chưa thì dời đồng hồ tới hạn.
-                const auto nguong =
+                // Two timeouts in a row without a matching event mean this app does not update its
+                // snapshot while deleting (Edge's address bar only updates on printable keys). Use the
+                // short timeout, still above the race window (Slow mode's 8 ms per key); a matching
+                // event restores the long one.
+                const int  timeoutMs = surr_timeout_streak_ >= 2 ? engine_->config().waitSurroundingShortMs.value() : engine_->config().waitSurroundingTimeoutMs.value();
+                const auto timeout   = static_cast<uint64_t>(timeoutMs) * 1000ULL;
+                // Timer accuracy 0 in sd-event means the default 250 ms slack (a 40 ms timer fired at 64,
+                // a 200 ms one at 243), so pass 1 ms. The first deadline sits at the Slow-mode threshold:
+                // many apps send their "done" snapshot before it and then go quiet, so re-check the latest
+                // snapshot there and commit ("threshold"); otherwise move the timer to the full timeout.
+                const auto threshold =
                     static_cast<uint64_t>(engine_->config().waitSurroundingMinPerKeyMs.value()) * static_cast<uint64_t>(std::max(expected_backspaces_, 1)) * 1000ULL;
-                const auto moc_dau = nguong < han ? cho_surr_bat_dau_ + nguong : cho_surr_bat_dau_ + han;
-                cho_surr_timer_    = instance->eventLoop().addTimeEvent(CLOCK_MONOTONIC, moc_dau, 1000, [this, han](EventSourceTime* t, uint64_t) {
-                    if (!cho_dang_cho_ || cho_hen_gio_ || !is_deleting_.load()) {
+                const auto firstDeadline = threshold < timeout ? surr_wait_started_at_ + threshold : surr_wait_started_at_ + timeout;
+                surr_wait_timer_         = instance->eventLoop().addTimeEvent(CLOCK_MONOTONIC, firstDeadline, 1000, [this, timeout](EventSourceTime* t, uint64_t) {
+                    if (!surr_wait_pending_ || surr_wait_timer_only_ || !is_deleting_.load()) {
                         return false;
                     }
-                    const auto da_cho = ::fcitx::now(CLOCK_MONOTONIC) - cho_surr_bat_dau_;
-                    if (da_cho + 1000 < han) {
-                        if (oDaXoaXong()) {
-                            giaoSauKhiLang("nguong", true);
+                    const auto waited = ::fcitx::now(CLOCK_MONOTONIC) - surr_wait_started_at_;
+                    if (waited + 1000 < timeout) {
+                        if (deletionLooksDone()) {
+                            deliverAfterSettle("threshold", true);
                             return false;
                         }
-                        t->setTime(cho_surr_bat_dau_ + han);
+                        t->setTime(surr_wait_started_at_ + timeout);
                         t->setOneShot();
                         return true;
                     }
-                    ketThucThayChu("qua han", true);
+                    finishReplacement("timeout", true);
                     return false;
                 });
                 return true;
             }
-            // v11: đóng băng → đường ngủ cũ nhưng với hằng số của Slow (8 × (N − 1), đo 60/60 trên
-            // Firefox), không ngủ chồng: đo được: ngủ thêm 8 × N làm N=1 mất 24 ms, N=2 mất 34 ms.
-            const int ngu_moi_phim = bo_cho_dong_bang ? std::max(sleepTime, engine_->config().waitSurroundingMinPerKeyMs.value()) : sleepTime;
-            int       cho_ms       = ngu_moi_phim * (expected_backspaces_ - 1);
+            // Frozen snapshot: fall back to sleeping with Slow mode's constant, 8 ms x (N - 1). Do not
+            // add it on top of the normal sleep (8 x N extra cost 24 ms for N=1 and 34 ms for N=2).
+            const int perKeyMs = skipFrozenWait ? std::max(sleepTime, engine_->config().waitSurroundingMinPerKeyMs.value()) : sleepTime;
+            int       waitMs   = perKeyMs * (expected_backspaces_ - 1);
             // Validate surr cursor pos should match realtextLen after all BS applied
             const auto& surr = ic_->surroundingText();
-            if (bo_cho_dong_bang) {
-                LOTUS_INFO("Skip retry (frozen)"); // v12: thử lại 3 × 2 ms là vô ích khi ảnh đóng băng
+            if (skipFrozenWait) {
+                LOTUS_INFO("Skip retry (frozen)"); // retrying 3 x 2 ms is pointless on a frozen snapshot
             } else if (surr.isValid() && surr.cursor() == realtextLen.load(std::memory_order_acquire)) {
                 LOTUS_INFO("Skip retry");
             } else if (!ic_->capabilityFlags().test(CapabilityFlag::SurroundingText)) {
-                // App KHÔNG KHAI năng lực surrounding text (đo 12/09: gnome-terminal và Chromium trên
-                // X11 đều cap=0) ⇒ nó sẽ không bao giờ gửi ảnh, chờ bao lâu cũng vô ích. Phân biệt với
-                // "có khai mà lần đầu báo invalid": trường hợp đó rơi xuống nhánh dưới, chờ đủ như cũ.
+                // The app does not declare surrounding text at all (gnome-terminal, Chromium on X11), so
+                // no snapshot will ever arrive and retrying is useless. Apps that declare it but report an
+                // invalid snapshot the first time fall through to the retry below.
                 LOTUS_INFO("Skip retry (no surrounding capability)");
             } else {
-                // Retry x3 (2 ms each), khi can (chromium,electron,...). App có khai mà chưa valid thì
-                // đúng là phải cho nó thời gian. Ở đây chờ bằng hẹn giờ chứ không sleep_for, nên vòng lặp
-                // sự kiện vẫn chạy và ảnh MỚI thật sự tới được trong 6 ms này — khác bản sleep_for, nơi
-                // ba lần thử đều đọc lại đúng một ảnh cũ vì loop bị chặn.
-                cho_ms += 3 * 2;
+                // Retry x3 (2 ms each) for apps that declare surrounding text but are not valid yet
+                // (Chromium, Electron...). This waits on a timer, not sleep_for, so the event loop keeps
+                // running and a fresh snapshot can actually arrive; with sleep_for all three retries read
+                // the same stale snapshot.
+                waitMs += 3 * 2;
             }
             event.filterAndAccept(); // Filter out the final trigger backspace.
-            if (cho_ms <= 0) {
-                ketThucThayChu("ngay", false);
+            if (waitMs <= 0) {
+                finishReplacement("immediate", false);
                 return true;
             }
-            // B33: sleep_for ở đây chặn event loop của CẢ fcitx5 (đo X11: 48/710 phím chặn ≥ 5 ms, lâu
-            // nhất 12,4 ms, 15 cụm chặn tổng 482 ms). Chờ đúng khoảng đó bằng hẹn giờ, trả loop về ngay.
-            // Phím tới trong lúc chờ vẫn vào buffered_keys_ vì is_deleting_ còn bật.
-            cho_dang_cho_      = true;
-            cho_hen_gio_       = true;
-            cho_lan_doi_focus_ = 0;
-            cho_surr_bat_dau_  = ::fcitx::now(CLOCK_MONOTONIC);
-            cho_moc_giao_      = cho_surr_bat_dau_ + (static_cast<uint64_t>(cho_ms) * 1000ULL);
-            cho_surr_timer_    = engine_->instance()->eventLoop().addTimeEvent(CLOCK_MONOTONIC, cho_surr_bat_dau_ + (static_cast<uint64_t>(cho_ms) * 1000ULL), 1000,
-                                                                               [this](EventSourceTime* t, uint64_t) {
-                                                                                if (!cho_dang_cho_ || !cho_hen_gio_) {
-                                                                                    return false;
-                                                                                }
-                                                                                if (!is_deleting_.load()) { // lượt thay chữ đã bị huỷ ở chỗ khác (phím điều hướng...)
-                                                                                    cho_dang_cho_ = false;
-                                                                                    cho_hen_gio_  = false;
-                                                                                    return false;
-                                                                                }
-                                                                                if (!ic_->hasFocus()) {
-                                                                                    // Chromium X11 rời ô rồi vào lại ngay (~0,3 ms): nổ đúng khe đó thì commitString
-                                                                                    // không tới nơi. Chờ thêm chút cho nó vào lại.
-                                                                                    if (++cho_lan_doi_focus_ <= 5) {
-                                                                                        t->setTime(::fcitx::now(CLOCK_MONOTONIC) + 2000);
-                                                                                        t->setOneShot();
-                                                                                        return true;
-                                                                                    }
-                                                                                    // Đổi cửa sổ thật trong lúc chờ: ô cũ không nhận chữ được nữa. Chỉ dọn trạng
-                                                                                    // thái của ô NÀY — is_deleting_ là biến chung, ô mới có thể đang thay chữ.
-                                                                                    LOTUS_INFO("Hen gio: o da mat focus, bo chu");
-                                                                                    cho_dang_cho_            = false;
-                                                                                    cho_hen_gio_             = false;
-                                                                                    expected_backspaces_     = 0;
-                                                                                    current_backspace_count_ = 0;
-                                                                                    pending_commit_string_.clear();
-                                                                                    return false;
-                                                                                }
-                                                                                ketThucThayChu("hen gio", true);
-                                                                                return false;
-                                                                               });
+            // sleep_for here would block the whole fcitx5 event loop (X11: 48 of 710 keys blocked
+            // >= 5 ms, worst 12.4 ms). Wait the same amount on a timer and return to the loop now. Keys
+            // arriving meanwhile still go to buffered_keys_ because is_deleting_ is set.
+            surr_wait_pending_       = true;
+            surr_wait_timer_only_    = true;
+            surr_wait_focus_retries_ = 0;
+            surr_wait_started_at_    = ::fcitx::now(CLOCK_MONOTONIC);
+            surr_wait_deliver_at_    = surr_wait_started_at_ + (static_cast<uint64_t>(waitMs) * 1000ULL);
+            surr_wait_timer_         = engine_->instance()->eventLoop().addTimeEvent(CLOCK_MONOTONIC, surr_wait_deliver_at_, 1000, [this](EventSourceTime* t, uint64_t) {
+                if (!surr_wait_pending_ || !surr_wait_timer_only_) {
+                    return false;
+                }
+                if (!is_deleting_.load()) { // the replacement was cancelled elsewhere (navigation key...)
+                    surr_wait_pending_    = false;
+                    surr_wait_timer_only_ = false;
+                    return false;
+                }
+                if (!ic_->hasFocus()) {
+                    // Chromium X11 leaves and re-enters the field within ~0.3 ms; a commit in that gap is
+                    // lost. Give it a moment to come back.
+                    if (++surr_wait_focus_retries_ <= 5) {
+                        t->setTime(::fcitx::now(CLOCK_MONOTONIC) + 2000);
+                        t->setOneShot();
+                        return true;
+                    }
+                    // The user really switched windows: the old field can no longer take the text. Reset
+                    // only this field's state; is_deleting_ is shared and the new field may be replacing.
+                    LOTUS_INFO("Timer: input context lost focus, dropping text");
+                    surr_wait_pending_       = false;
+                    surr_wait_timer_only_    = false;
+                    expected_backspaces_     = 0;
+                    current_backspace_count_ = 0;
+                    pending_commit_string_.clear();
+                    return false;
+                }
+                finishReplacement("timer", true);
+                return false;
+            });
             return true;
         }
         return false;
     }
 
-    void LotusState::send_select_uinput(int soChu) const {
-        send_backspace_uinput(-soChu);
+    void LotusState::send_select_uinput(int charCount) const {
+        send_backspace_uinput(-charCount);
     }
 
-    void LotusState::boiDenRoiGoDe(const std::string& addedPart, int soChu) {
+    void LotusState::selectAndOvertype(const std::string& addedPart, int charCount) {
         is_deleting_.store(true, std::memory_order_release);
         pending_commit_string_   = addedPart;
         expected_backspaces_     = 0;
         current_backspace_count_ = 0;
-        boi_so_chu_              = soChu;
-        boi_dang_cho_            = true;
+        overtype_char_count_     = charCount;
+        overtype_pending_        = true;
         {
-            const auto& sg = ic_->surroundingText();
-            boi_co_anh_    = sg.isValid();
-            boi_con_tro_   = boi_co_anh_ ? sg.cursor() : 0;
+            const auto& snapshot    = ic_->surroundingText();
+            overtype_had_snapshot_  = snapshot.isValid();
+            overtype_cursor_before_ = overtype_had_snapshot_ ? snapshot.cursor() : 0;
         }
-        boi_bat_dau_   = ::fcitx::now(CLOCK_MONOTONIC);
-        auto* instance = engine_->instance();
-        boi_watcher_.reset(); // ngoài dispatch của nó, an toàn
-        boi_watcher_ = instance->watchEvent(EventType::InputContextSurroundingTextUpdated, EventWatcherPhase::Default, [this](Event& e) {
+        overtype_started_at_ = ::fcitx::now(CLOCK_MONOTONIC);
+        auto* instance       = engine_->instance();
+        overtype_watcher_.reset(); // safe: we are outside its dispatch
+        overtype_watcher_ = instance->watchEvent(EventType::InputContextSurroundingTextUpdated, EventWatcherPhase::Default, [this](Event& e) {
             auto& ice = static_cast<InputContextEvent&>(e);
-            if (!boi_dang_cho_ || ice.inputContext() != ic_ || !is_deleting_.load()) {
+            if (!overtype_pending_ || ice.inputContext() != ic_ || !is_deleting_.load()) {
                 return;
             }
             const auto& s = ic_->surroundingText();
             if (!s.isValid()) {
                 return;
             }
-            const int lech = static_cast<int>(s.anchor()) - static_cast<int>(s.cursor());
-            if (lech != boi_so_chu_ && lech != -boi_so_chu_) {
+            const int selected = static_cast<int>(s.anchor()) - static_cast<int>(s.cursor());
+            if (selected != overtype_char_count_ && selected != -overtype_char_count_) {
                 return;
             }
-            ketThucBoiDen("boi den", false);
+            finishOvertype("selected", false);
         });
-        boi_timer_   = instance->eventLoop().addTimeEvent(CLOCK_MONOTONIC, boi_bat_dau_ + 150000ULL, 1000, [this](EventSourceTime*, uint64_t) {
-            if (boi_dang_cho_ && is_deleting_.load()) {
-                boHanBoiDen();
+        overtype_timer_   = instance->eventLoop().addTimeEvent(CLOCK_MONOTONIC, overtype_started_at_ + 150000ULL, 1000, [this](EventSourceTime*, uint64_t) {
+            if (overtype_pending_ && is_deleting_.load()) {
+                abandonOvertype();
             }
             return false;
         });
-        // forwardKey của fcitx KHÔNG kèm được Shift: đo 20/09 trên Edge/KWin, con trỏ lùi mà anchor đi
-        // theo (không có vùng chọn), kể cả khi bấm giữ Shift_L quanh loạt mũi tên. Bàn phím thật thì
-        // Edge báo vùng chọn đúng (cur=3 anc=1) ⇒ phải bắn ở mức thiết bị qua máy chủ uinput.
-        send_select_uinput(soChu);
-        LOTUS_INFO("Select " + std::to_string(soChu) + " chars");
+        // fcitx's forwardKey cannot carry Shift: on Edge/KWin the cursor moved but the anchor followed
+        // it (no selection), even with Shift_L held around the arrows. A real keyboard produces a
+        // proper selection, so send it at device level through the uinput server.
+        send_select_uinput(charCount);
+        LOTUS_INFO("Select " + std::to_string(charCount) + " chars");
     }
 
-    // Ô không báo vùng bôi đen trong hạn: KHÔNG gõ đè (con trỏ đang lùi, chữ sẽ chèn sai chỗ và làm
-    // rối chữ). Đưa con trỏ về chỗ cũ rồi bỏ lần thay này — người gõ mất dấu một chữ và thấy ngay.
-    void LotusState::boHanBoiDen() {
-        const auto& sg     = ic_->surroundingText();
-        int         soPhai = 1; // vùng bôi đen có thật nhưng ô không báo: một phím phải là về chỗ cũ
-        if (boi_co_anh_ && sg.isValid() && sg.cursor() == sg.anchor() && sg.cursor() + static_cast<unsigned int>(boi_so_chu_) == boi_con_tro_) {
-            soPhai = boi_so_chu_; // ô chỉ dời con trỏ, không bôi đen
+    // The field did not report the selection in time. Do not type over it: the cursor has moved and
+    // the text would land in the wrong place. Move the cursor back and drop this replacement; the
+    // user loses one tone mark and sees it immediately.
+    void LotusState::abandonOvertype() {
+        const auto& snapshot     = ic_->surroundingText();
+        int         rightPresses = 1; // a real but unreported selection collapses with one Right
+        if (overtype_had_snapshot_ && snapshot.isValid() && snapshot.cursor() == snapshot.anchor() &&
+            snapshot.cursor() + static_cast<unsigned int>(overtype_char_count_) == overtype_cursor_before_) {
+            rightPresses = overtype_char_count_; // the field only moved the cursor, nothing selected
         }
-        for (int i = 0; i < soPhai; ++i) {
+        for (int i = 0; i < rightPresses; ++i) {
             ic_->forwardKey(Key(FcitxKey_Right), false);
             ic_->forwardKey(Key(FcitxKey_Right), true);
         }
-        LOTUS_INFO("Overtype bo han after " + std::to_string((::fcitx::now(CLOCK_MONOTONIC) - boi_bat_dau_) / 1000) + " ms, tra con tro " + std::to_string(soPhai));
-        boi_dang_cho_ = false;
+        LOTUS_INFO("Overtype gave up after " + std::to_string((::fcitx::now(CLOCK_MONOTONIC) - overtype_started_at_) / 1000) + " ms, moved cursor right " +
+                   std::to_string(rightPresses));
+        overtype_pending_ = false;
         pending_commit_string_.clear();
         expected_backspaces_     = 0;
         current_backspace_count_ = 0;
@@ -925,17 +931,18 @@ namespace fcitx {
         ResetEngine(lotusEngine_.handle());
         oldPreBuffer_.clear();
         is_deleting_.store(false);
-        // Phím gõ trong lúc chờ là phím thật của người gõ: trả lại, không vứt (đo 23/09: vứt thì mất dấu
-        // cách, ra "đươcđêm"). Con trỏ đã về chỗ cũ, nên gõ lại ở đây cũng như phím gõ ngay sau.
+        // Keys typed during the wait are real user input: replay them rather than dropping them
+        // (dropping lost a space, "đươcđêm"). The cursor is back in place, so replaying here is the
+        // same as typing them right after.
         replayBufferedKeys();
     }
 
-    void LotusState::ketThucBoiDen(const char* ly_do, bool tu_timer) {
-        const auto tre_ms = (::fcitx::now(CLOCK_MONOTONIC) - boi_bat_dau_) / 1000;
-        LOTUS_INFO("Overtype " + std::string(ly_do) + " after " + std::to_string(tre_ms) + " ms");
-        boi_dang_cho_ = false;
-        if (!tu_timer && boi_timer_) {
-            boi_timer_.reset(); // không reset từ trong chính callback của nó
+    void LotusState::finishOvertype(const char* reason, bool fromTimer) {
+        const auto elapsedMs = (::fcitx::now(CLOCK_MONOTONIC) - overtype_started_at_) / 1000;
+        LOTUS_INFO("Overtype " + std::string(reason) + " after " + std::to_string(elapsedMs) + " ms");
+        overtype_pending_ = false;
+        if (!fromTimer && overtype_timer_) {
+            overtype_timer_.reset(); // never reset a timer from inside its own callback
         }
         if (!pending_commit_string_.empty()) {
             ic_->commitString(pending_commit_string_);
@@ -953,63 +960,66 @@ namespace fcitx {
         current_backspace_count_ = 0;
         pending_commit_string_   = addedPart;
         expected_backspaces_     = static_cast<int>(utf8::length(deletedPart));
-        cho_deleted_             = deletedPart;
+        surr_wait_deleted_       = deletedPart;
         {
-            const auto& sg   = ic_->surroundingText();
-            cho_anh_luc_gui_ = sg.isValid() ? sg.text() + "\x1f" + std::to_string(sg.cursor()) : std::string();
+            const auto& snapshot     = ic_->surroundingText();
+            surr_wait_sent_snapshot_ = snapshot.isValid() ? snapshot.text() + "\x1f" + std::to_string(snapshot.cursor()) : std::string();
         }
-        cho_prefix_ = (oldPreBuffer_.size() >= deletedPart.size()) ? oldPreBuffer_.substr(0, oldPreBuffer_.size() - deletedPart.size()) : std::string();
+        surr_wait_prefix_ = (oldPreBuffer_.size() >= deletedPart.size()) ? oldPreBuffer_.substr(0, oldPreBuffer_.size() - deletedPart.size()) : std::string();
         {
-            // v12: ảnh lúc bắn "cập nhật" = phần trước con trỏ kết thúc bằng prefix+deleted. Firefox tụt
-            // thì ảnh lúc bắn đã chậm (không thấy phần sắp xoá) → không được tính là đóng băng
-            // (nhịp ngẫu nhiên kích hoạt nhầm 3 lần trên Firefox).
-            cho_anh_gui_cap_nhat_ = false;
-            const auto& sg2       = ic_->surroundingText();
-            if (sg2.isValid()) {
-                const std::string& t  = sg2.text();
+            // The send-time snapshot is fresh when the text before the cursor ends with prefix + deleted.
+            // A lagging Firefox sends a stale one (the text about to be deleted is missing), which must not
+            // count towards "frozen" (random timing triggered it 3 times on Firefox).
+            surr_wait_sent_snapshot_fresh_ = false;
+            const auto& snapshot           = ic_->surroundingText();
+            if (snapshot.isValid()) {
+                const std::string& t  = snapshot.text();
                 auto               it = t.begin();
-                for (unsigned int i = 0; i < sg2.cursor() && it != t.end(); ++i) {
+                for (unsigned int i = 0; i < snapshot.cursor() && it != t.end(); ++i) {
                     it = utf8::nextChar(it);
                 }
-                const std::string truoc(t.begin(), it);
-                const std::string can = cho_prefix_ + cho_deleted_;
-                cho_anh_gui_cap_nhat_ = truoc.size() >= can.size() && truoc.compare(truoc.size() - can.size(), can.size(), can) == 0;
+                const std::string before(t.begin(), it);
+                const std::string expected     = surr_wait_prefix_ + surr_wait_deleted_;
+                surr_wait_sent_snapshot_fresh_ = before.size() >= expected.size() && before.compare(before.size() - expected.size(), expected.size(), expected) == 0;
             }
         }
         const auto&       surrounding = ic_->surroundingText();
         const std::string surrText    = surrounding.text();
-        // Chỉ ô soạn của Facebook: đo 20/09, các ô khác có khai chữ chung quanh nhưng KHÔNG khai lại
-        // khi chỉ bôi đen (150 ms không một tin nào) ⇒ bật ra mọi ô là mất dấu toàn máy. Ô đăng bài khai
-        // lại như ô tin nhắn (24/09: bôi đen xác nhận sau 7 ms); sửa giữa đoạn mà xoá rồi giao thì mất
-        // chữ ("đây là bản fork" ra "ây l bn fork"), nên nhận ô theo đuôi cả ô, không theo phần sau con trỏ.
-        if (engine_->config().messengerSelectOvertype.value() && realMode != LotusMode::Minecraft && giongOSoanFacebook(surrounding)) {
-            boiDenRoiGoDe(addedPart, static_cast<int>(utf8::length(deletedPart)));
+        // Facebook composers only. Other fields declare surrounding text but do not report a
+        // selection-only change (150 ms without a single event), so enabling this everywhere would
+        // drop tone marks system-wide. The post box reports the selection like the message box does
+        // (confirmed after 7 ms); deleting then committing mid-text there loses characters ("đây là
+        // bản fork" became "ây l bn fork"), so match on the tail of the whole field, not the text after
+        // the cursor.
+        if (engine_->config().messengerSelectOvertype.value() && realMode != LotusMode::Minecraft && looksLikeFacebookComposer(surrounding)) {
+            selectAndOvertype(addedPart, static_cast<int>(utf8::length(deletedPart)));
             return;
         }
-        // LibreOffice gán Backspace thành phím tắt (.uno:SwBackspace) và mọi phím tắt chạy HẸN SAU
-        // (AsyncAccelExec::execAsync), còn chữ commit chèn ngay → chữ vượt mặt phím xoá còn trong hàng
-        // ('chao'+f → 'chaà'; đo 16/09 Writer: 30–36/60 từ sai, chờ lâu hơn / sync mode / forwardKey đều không cứu).
-        // deleteSurroundingText thì Writer làm NGAY trên văn bản thật, tính từ con trỏ, nên không cần ảnh
-        // khớp cuối câu như app khác. Đo: 0/60 ở 70, 150, 350 ms.
-        const bool laLibreOffice = ic_->program() == "soffice" && realMode != LotusMode::Minecraft;
-        bool       isSurrText    = laLibreOffice ? ic_->capabilityFlags().test(CapabilityFlag::SurroundingText) :
+        // LibreOffice binds Backspace to a shortcut (.uno:SwBackspace) and runs every shortcut
+        // asynchronously (AsyncAccelExec::execAsync), while committed text is inserted at once, so the
+        // text overtakes queued backspaces ('chao'+f -> 'chaà'; Writer: 30-36 of 60 words wrong; longer
+        // waits, sync mode and forwardKey did not help). deleteSurroundingText is applied immediately,
+        // relative to the cursor, so the end-of-text check other apps need is not required. Measured
+        // 0/60 wrong at 70, 150 and 350 ms per key.
+        const bool isLibreOffice = ic_->program() == "soffice" && realMode != LotusMode::Minecraft;
+        bool       isSurrText    = isLibreOffice ? ic_->capabilityFlags().test(CapabilityFlag::SurroundingText) :
                                                    engine_->config().useSurroundingTextIfPossible.value() && ic_->capabilityFlags().test(CapabilityFlag::SurroundingText) &&
                 surrounding.isValid() && !surrText.empty() && surrounding.cursor() == utf8::length(surrText);
         if (!isSurrText && realMode != LotusMode::Minecraft) {
             ++expected_backspaces_;
-            // Super Smooth bỏ lá chắn ở mọi ô để gõ nhanh, NHƯNG thanh địa chỉ trình duyệt vẫn cần
-            // nó (lỗi lặp chữ đầu, #190). Chromium khai cờ Url; Firefox không khai nên nhận theo
-            // hình dạng đuôi tự điền. Mọi ô khác giữ nguyên hành vi Super Smooth.
-            const bool laDiaChiFirefox = ic_->program() == "firefox" && chuSauGiongDuoiUrl(surrounding);
-            const bool xetKhien        = realMode != LotusMode::SuperSmooth || ic_->capabilityFlags().test(CapabilityFlag::Url) || laDiaChiFirefox;
-            if (xetKhien) {
+            // Super Smooth skips the autofill guard everywhere for speed, but browser address bars
+            // still need it (doubled first letter, #190). Chromium sets the Url flag; Firefox does not,
+            // so recognise its autofill tail by shape. Every other field keeps Super Smooth behaviour.
+            const bool isFirefoxAddressBar = ic_->program() == "firefox" && textAfterCursorLooksLikeUrl(surrounding);
+            const bool checkAutofill       = realMode != LotusMode::SuperSmooth || ic_->capabilityFlags().test(CapabilityFlag::Url) || isFirefoxAddressBar;
+            if (checkAutofill) {
                 // Enable Autofill detection for all frontends (Wayland/IBus).
                 // This fixes the "toôi" duplication bug in Chromium-based search bars.
                 // The isAutofillCertain function has been optimized to differentiate
                 // between browser autofill and AI ghost text.
-                // Firefox: gợi ý tự điền hiện ngay sau chữ đầu tiên của ô; isAutofillCertain chạy trước
-                // để giữ nguyên cập nhật realtextLen của nó.
-                if (isAutofillCertain(surrounding) || (laDiaChiFirefox && truocTroChiCoTuDangGo(surrounding, oldPreBuffer_))) {
+                // Firefox shows its autofill suggestion right after the first character of the field.
+                // isAutofillCertain runs first so its realtextLen update still happens.
+                if (isAutofillCertain(surrounding) || (isFirefoxAddressBar && onlyCurrentWordBeforeCursor(surrounding, oldPreBuffer_))) {
                     ++expected_backspaces_;
                 }
             }
@@ -1513,9 +1523,9 @@ namespace fcitx {
         }
         if (keyEvent.isRelease())
             return;
-        if (const KeySym symBoi = keyEvent.rawKey().sym(); boi_dang_cho_ && (symBoi == FcitxKey_Left || symBoi == FcitxKey_Shift_L || symBoi == FcitxKey_Shift_R)) {
-            // Shift+Left do chính mình bắn ra để bôi đen: phải tới được ứng dụng, và không được coi
-            // là người dùng di con trỏ (sẽ xoá mất chữ đang chờ giao).
+        if (const KeySym rawSym = keyEvent.rawKey().sym(); overtype_pending_ && (rawSym == FcitxKey_Left || rawSym == FcitxKey_Shift_L || rawSym == FcitxKey_Shift_R)) {
+            // Our own Shift+Left selection: it must reach the app and must not be treated as the user
+            // moving the cursor (that would discard the pending commit).
             keyEvent.forward();
             return;
         }
@@ -1523,9 +1533,9 @@ namespace fcitx {
             LOTUS_WARN("Cannot connect to uinput server, reconnecting....");
             connect_uinput_server();
         }
-        // Van an toàn này tắt cờ lặng lẽ ở phím kế tiếp; khi đang chờ sự kiện thì phải bỏ qua,
-        // nếu không chữ chờ giao bị vứt (v2: " Nam").
-        if (!cho_dang_cho_ && !boi_dang_cho_ && current_backspace_count_ >= expected_backspaces_ && is_deleting_.load()) {
+        // This safety valve silently clears the flag on the next key. Skip it while a wait is pending,
+        // otherwise the pending commit is thrown away.
+        if (!surr_wait_pending_ && !overtype_pending_ && current_backspace_count_ >= expected_backspaces_ && is_deleting_.load()) {
             is_deleting_.store(false);
             current_backspace_count_ = 0;
             expected_backspaces_     = 0;
@@ -1591,16 +1601,16 @@ namespace fcitx {
             }
         }
 
-        if (is_deleting_.load(std::memory_order_acquire) && cho_hen_gio_) {
-            // B33: phím tới trong lúc chờ hẹn giờ (gõ rất nhanh). Không cất rồi phát lại bằng commitString:
-            // Chromium X11 rơi mất chữ phát lại dồn sau chữ thay thế (đo 5 ms/phím: thanh địa chỉ Edge
-            // 15/30). Chờ NỐT phần còn lại, giao chữ, rồi xử lý phím này như thường — đúng thứ tự của bản
-            // sleep_for, chỉ chặn loop khi thật sự có phím chen vào, và chặn ngắn hơn.
-            const uint64_t bayGio = ::fcitx::now(CLOCK_MONOTONIC);
-            if (cho_moc_giao_ > bayGio) {
-                std::this_thread::sleep_for(std::chrono::microseconds(cho_moc_giao_ - bayGio));
+        if (is_deleting_.load(std::memory_order_acquire) && surr_wait_timer_only_) {
+            // A key arrived during a timer-only wait (very fast typing). Buffering it and replaying via
+            // commitString loses text on Chromium X11 (Edge address bar, 5 ms per key: 15 of 30 wrong).
+            // Finish the remaining wait, commit, then handle this key normally: same order as the old
+            // sleep_for, but the loop only blocks when a key actually interrupts, and for less time.
+            const uint64_t nowUs = ::fcitx::now(CLOCK_MONOTONIC);
+            if (surr_wait_deliver_at_ > nowUs) {
+                std::this_thread::sleep_for(std::chrono::microseconds(surr_wait_deliver_at_ - nowUs));
             }
-            ketThucThayChu("phim toi", false);
+            finishReplacement("key arrived", false);
         }
         if (is_deleting_.load(std::memory_order_acquire)) {
             if (isBackspace(currentSym)) {

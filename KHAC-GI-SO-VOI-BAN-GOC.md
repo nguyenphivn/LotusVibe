@@ -467,7 +467,7 @@ bỏ chờ retry), nên nhiều khả năng lỗi dễ lộ hơn. **Chưa đo** 
 **Nguyên nhân, đo bằng dòng log tạm in ảnh ô chữ Edge báo về (đã gỡ, nằm ở nhánh `do/messenger-edge`):**
 
 1. **Ảnh nửa vời.** Mỗi phím xoá, Messenger báo con trỏ lùi trước, chữ trong ô xoá sau: `tie\n\n`
-   con trỏ 2, vài ms sau mới `ti\n\n`. `oDaXoaXong` chỉ nhìn phần trước con trỏ nên tưởng đã xoá xong
+   con trỏ 2, vài ms sau mới `ti\n\n`. `deletionLooksDone` chỉ nhìn phần trước con trỏ nên tưởng đã xoá xong
    và giao chữ. Trang vứt chữ đó, rồi phím xoá của lần thay sau ăn vào chữ thật. Đo 17/09: 3/3 lần giao
    trên ảnh nửa vời mất chữ, 3/3 lần giao trên ảnh khớp vào đủ. Ô Lexical trơn không báo kiểu này: nó
    bôi đen chữ sắp xoá (con trỏ và neo lệch nhau) rồi mới xoá.
@@ -624,7 +624,7 @@ nhận 659/660 lần, bộ gõ ở tiếng Việt suốt lượt; sai 1/50 do l�
 
 **Hết hạn thì trả lại phím gõ trong lúc chờ (23/09).** Đo 23/09, câu 32: Facebook chậm tới mức chữ `c`
 vừa gõ chưa hiện, ô không báo vùng chọn trong 150 ms ⇒ đường lùi bỏ lần thêm dấu (`đươc`, đúng thiết kế),
-nhưng `boHanBoiDen()` xoá luôn `buffered_keys_` nên dấu cách gõ trong 150 ms đó mất theo (`đươcđêm`).
+nhưng `abandonOvertype()` xoá luôn `buffered_keys_` nên dấu cách gõ trong 150 ms đó mất theo (`đươcđêm`).
 Lượt 20/09 không có lần chạm hạn nào nên chưa lộ. Vá: đường lùi gọi `replayBufferedKeys()` sau khi trả con
 trỏ, như đường xác nhận. Phím bỏ dấu nằm trong hàng thì ra chữ thường, vì bộ gõ đã quên từ trước đó.
 
@@ -640,7 +640,7 @@ xoá xong, chữ giao 4–5 ms sau thì mất (`đ`, `ả`, `à`, `đi`, `á`). 
 đi đường bôi đen, Edge báo vùng chọn sau 7 ms và chữ vào đúng. Nên ô này **có** báo lại khi bôi đen,
 chỉ là không được nhận ra. Trên 5.000 ảnh của ô soạn Facebook trong log, ảnh nào cũng kết thúc bằng
 `\n\n` dù con trỏ ở đâu (2787 giữa đoạn, 2207 cuối đoạn); 27 ảnh không khớp đều là danh sách tin
-nhắn. Vá: quyết định bôi đen nhận ô theo **đuôi cả ô** (`giongOSoanFacebook`), không theo phần sau
+nhắn. Vá: quyết định bôi đen nhận ô theo **đuôi cả ô** (`looksLikeFacebookComposer`), không theo phần sau
 con trỏ. Mức chờ lắng theo giờ vẫn giữ hình cũ, không nới. Bài kiểm thêm bước "ô đăng bài, giữa
 đoạn": mã cũ đỏ đúng bước đó (máy chủ nhận 2 thay vì -1); cho hàm nhận mọi ô thì đỏ ở bước "ô
 thường vẫn xoá bằng phím xoá". Chưa đo trên máy gõ tự động.

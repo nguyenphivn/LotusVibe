@@ -89,21 +89,21 @@ void UinputDevice::send_backspace() {
     write(guard_.get(), ev, sizeof(ev));
 }
 
-// Bôi đen soChu chữ bên trái con trỏ: giữ Shift PHẢI, bắn mũi tên trái, nhả Shift. Bắn liền một mạch
-// vì đây là một thao tác chọn, không phải chuỗi phím rời như phím xoá.
-// Không dùng Shift trái: fcitx5 mặc định coi chạm Shift trái một mình là chuyển tiếng Anh. Có Shift
-// trái thì thỉnh thoảng bộ gõ rơi về tiếng Anh trong ô Messenger (gặp khi dùng thật 23/09; nghi fcitx5
-// không thấy mũi tên ở giữa). Shift phải không phải phím chuyển nên không thể dính.
-void UinputDevice::send_select(int soChu) {
-    if (!guard_.is_valid() || soChu <= 0)
+// Select charCount characters left of the cursor: press right Shift, tap Left, release Shift, all in
+// one write since it is a single selection rather than separate keystrokes like backspaces.
+// Right Shift, not left: fcitx5 treats a lone left Shift tap as the switch to English by default,
+// and with left Shift the IME occasionally fell back to English in the Messenger composer (probably
+// fcitx5 not seeing the arrows in between). Right Shift is not a switch key.
+void UinputDevice::send_select(int charCount) {
+    if (!guard_.is_valid() || charCount <= 0)
         return;
-    std::vector<struct input_event> ev(2 + (4 * static_cast<size_t>(soChu)) + 2);
+    std::vector<struct input_event> ev(2 + (4 * static_cast<size_t>(charCount)) + 2);
     size_t                          i = 0;
     ev[i].type                        = EV_KEY;
     ev[i].code                        = KEY_RIGHTSHIFT;
     ev[i].value                       = 1;
     i += 2; // i+1: SYN_REPORT (zero-init)
-    for (int k = 0; k < soChu; ++k) {
+    for (int k = 0; k < charCount; ++k) {
         ev[i].type  = EV_KEY;
         ev[i].code  = KEY_LEFT;
         ev[i].value = 1;
@@ -310,19 +310,19 @@ int main(int argc, char* argv[]) {
     sigaction(SIGTERM, &sa, nullptr);
     sigaction(SIGINT, &sa, nullptr);
 
-    // Khoảng cách giữa hai phím xoá. Đặt LOTUS_BACKSPACE_GAP_MS để đổi mà không phải dựng lại mã;
-    // nhận 0..50, ngoài khoảng thì bỏ qua.
+    // Gap between two backspaces. LOTUS_BACKSPACE_GAP_MS overrides it without a rebuild; accepts
+    // 0..50, anything else is ignored.
     //
-    // Mặc định hạ 5 -> 0 (12/09/2026). Đo trên bốn đích — Konsole, ô soạn Edge, Firefox, Edge chạy
-    // qua XWayland — ở cả nhịp gõ 50 ms và 5 ms mỗi phím: mức 2 ms ra 2,18-2,21 ms, mức 1 ms ra
-    // 1,18-1,21, mức 0 ra 0,08-0,10, TẤT CẢ gõ đúng 8/8. Mức càng nhỏ càng đều (đỉnh 4,74 / 1,45 /
-    // 0,18 ms ở nhịp nhanh).
+    // Default lowered from 5 to 0. Measured on Konsole, the Edge composer, Firefox and Edge under
+    // XWayland, at 50 ms and 5 ms per key: a 2 ms setting gave 2.18-2.21 ms gaps, 1 ms gave
+    // 1.18-1.21, 0 gave 0.08-0.10, and every target typed 8/8 correctly. Smaller is also steadier
+    // (peaks 4.74 / 1.45 / 0.18 ms at fast typing).
     //
-    // Đánh đổi phải biết: vòng lặp chỉ bắn phím xoá khi poll HẾT GIỜ mà không có gì xảy ra, nên con
-    // số này là yêu cầu "khe im lặng" trên seat0. Đặt 0 tức bỏ hẳn yêu cầu đó: máy chủ bắn phím xoá
-    // bất kể người dùng có đang bấm phím hay không. Bộ đo gõ ~25 ms mỗi phím (bàn phím ảo tốn sẵn
-    // ~20 ms) nên KHÔNG chạm tới ca đó — bằng chứng cho mức 0 là dùng tay thật, không phải số đo.
-    // Mức lùi có số liệu đỡ là 2 ms. Dấu hiệu phải quay lại: sót chữ hoặc thừa chữ khi gõ nhanh.
+    // Trade-off: the loop only sends backspaces when poll times out with nothing happening, so this
+    // value is a required quiet gap on seat0. 0 removes that requirement: backspaces go out whether or
+    // not the user is pressing keys. The benchmark typed ~25 ms per key, so it never hit that case;
+    // the evidence for 0 is real use, not measurement. 2 ms is the measured fallback. Go back to it if
+    // fast typing drops or duplicates characters.
     int backspace_gap_ms = 0;
     if (const char* g = std::getenv("LOTUS_BACKSPACE_GAP_MS"); g != nullptr && *g != '\0') {
         char*      end = nullptr;
@@ -405,7 +405,7 @@ int main(int argc, char* argv[]) {
                 kb_client_fd.reset(-1);
                 fds[KB_CLIENT_INDEX].fd = -1;
             } else if (count < 0) {
-                uinput.send_select(-count); // âm = bôi đen |count| chữ
+                uinput.send_select(-count); // negative = select |count| chars
             } else {
                 pending_backspaces += count - 1;
                 uinput.send_backspace();
