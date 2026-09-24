@@ -746,6 +746,15 @@ chọn icon riêng. Commit rút hàng libinput ra rỗng (fork đã có). Hai ch
 `lotus-icon-resolver.h` và `ack-apps.h`). Bộ kiểm 21/21. Lần gom sau vẫn phải quyết lại hai commit bỏ
 qua ở trên.
 
+**Bộ chọn icon riêng đã đảo lại cùng ngày (`90c0e27`).** Bỏ nó thì Lotus chỉ báo cho khay **tên**
+icon (`fcitx-lotus-default`), để KDE tự tra theo bộ icon đang dùng. Máy chủ fork dùng bộ Colloid:
+bộ này không có tên đó nhưng có `fcitx`, KDE cắt dần đuôi tên (`fcitx-lotus` rồi `fcitx`) và khớp
+vào icon bàn phím chung của Colloid trước khi tìm tới `hicolor`. Khay mất chữ V, hiện ô ⌘ viền tròn
+(kiểm qua D-Bus: `IconName` đúng là `fcitx-lotus-default`; Colloid có `status/22/fcitx.svg`, không
+có `fcitx-lotus*`). Bộ chọn icon trả đường dẫn thẳng tới file nên không phải tra tên. Bản gốc bỏ nó
+không kèm PR hay issue nêu lý do. Lần gom sau: bỏ qua `334becf`, trừ khi bản gốc có cách khác
+chữa được trường hợp này.
+
 Mã băm commit trong tệp này đổi theo mỗi lần gom; tìm theo tiêu đề commit nếu không khớp.
 
 **Không đổi tên trong mã.** Ngày 17/09/2026 chỉ đổi tên KHO trên GitHub thành `LotusVibe` (link cũ tự
