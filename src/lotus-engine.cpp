@@ -45,9 +45,7 @@ namespace fcitx {
     int                   modeToInt(LotusMode mode) {
         switch (mode) {
             case LotusMode::Off: return 0;
-            case LotusMode::Smooth: return 1;
             case LotusMode::Uinput: return 2;
-            case LotusMode::SuperSmooth: return 3;
             case LotusMode::SurroundingText: return 4;
             case LotusMode::Preedit: return 5;
             case LotusMode::Emoji: return 6;
@@ -59,9 +57,10 @@ namespace fcitx {
     LotusMode intToMode(int mode) {
         switch (mode) {
             case 0: return LotusMode::Off;
-            case 1: return LotusMode::Smooth;
-            case 2: return LotusMode::Uinput;
-            case 3: return LotusMode::SuperSmooth;
+            case 1: // former Uinput (Smooth)
+            case 2:
+            case 3: // former Uinput (Super Smooth)
+                return LotusMode::Uinput;
             case 4: return LotusMode::SurroundingText;
             case 5: return LotusMode::Preedit;
             case 6: return LotusMode::Emoji;
@@ -70,13 +69,32 @@ namespace fcitx {
         }
     }
 
+    namespace {
+        // The former Smooth, Slow and Super Smooth modes are now the single Uinput mode. Their
+        // stored names would not parse, and fcitx would silently fall back to the Preedit default.
+        bool isLegacyUinputModeName(const std::string& name) {
+            return name == "Uinput (Smooth)" || name == "Uinput (Slow)" || name == "Uinput (Super Smooth)";
+        }
+
+        void migrateLegacyMode(RawConfig& config) {
+            if (const auto* mode = config.valueByPath("Mode"); mode != nullptr && isLegacyUinputModeName(*mode)) {
+                config.setValueByPath("Mode", "Uinput");
+            }
+        }
+
+        // ModeOrder entries written before the merge.
+        std::string canonicalModeKey(const std::string& name) {
+            return (name == "Smooth" || name == "SuperSmooth") ? "Uinput" : name;
+        }
+    } // namespace
+
     // Returns the KeySym that triggers the "Type hotkey char" action in the mode
     // menu.  If the hotkey itself conflicts with a reserved menu key, falls back
     // to FcitxKey_f.
     static bool isAppModeMenuReservedKey(KeySym sym, const lotusConfig& config) {
-        if (sym == Key(*config.shortcutSmooth).sym() || sym == Key(*config.shortcutUinput).sym() || sym == Key(*config.shortcutMinecraft).sym() ||
-            sym == Key(*config.shortcutSurroundingText).sym() || sym == Key(*config.shortcutPreedit).sym() || sym == Key(*config.shortcutEmoji).sym() ||
-            sym == Key(*config.shortcutOff).sym() || sym == Key(*config.shortcutSuperSmooth).sym() || sym == Key(*config.shortcutDefault).sym()) {
+        if (sym == Key(*config.shortcutUinput).sym() || sym == Key(*config.shortcutMinecraft).sym() || sym == Key(*config.shortcutSurroundingText).sym() ||
+            sym == Key(*config.shortcutPreedit).sym() || sym == Key(*config.shortcutEmoji).sym() || sym == Key(*config.shortcutOff).sym() ||
+            sym == Key(*config.shortcutDefault).sym()) {
             return true;
         }
 
@@ -337,7 +355,10 @@ namespace fcitx {
     }
 
     void LotusEngine::reloadConfig() {
-        readAsIni(config_, "conf/lotus.conf");
+        RawConfig raw;
+        readAsIni(raw, "conf/lotus.conf");
+        migrateLegacyMode(raw);
+        config_.load(raw);
         readAsIni(customKeymap_, CustomKeymapFile);
         readAsIni(macroTables_, MacroTableFile);
         macroTableObject_.reset(newMacroTable(macroTables_));
@@ -390,7 +411,9 @@ namespace fcitx {
     }
 
     void LotusEngine::setConfig(const RawConfig& config) {
-        config_.load(config, true);
+        RawConfig migrated = config;
+        migrateLegacyMode(migrated);
+        config_.load(migrated, true);
         saveConfig();
         populateConfig();
     }
@@ -653,17 +676,15 @@ namespace fcitx {
             LotusMode                                 realMode = getAppRule(appName);
 
             auto                                      order      = stringutils::split(*config_.modeOrder, ",");
-            std::vector<std::pair<std::string, bool>> visibility = {{"Smooth", *config_.showModeSmooth},
-                                                                    {"Uinput", *config_.showModeUinput},
-                                                                    {"Minecraft", *config_.showModeMinecraft},
-                                                                    {"SurroundingText", *config_.showModeSurroundingText},
-                                                                    {"Preedit", *config_.showModePreedit},
-                                                                    {"Emoji", *config_.showModeEmoji},
-                                                                    {"Off", *config_.showModeOff},
-                                                                    {"SuperSmooth", *config_.showModeSuperSmooth},
-                                                                    {"Default", *config_.showModeDefault}};
+            std::vector<std::pair<std::string, bool>> visibility = {
+                {"Uinput", *config_.showModeUinput},   {"Minecraft", *config_.showModeMinecraft}, {"SurroundingText", *config_.showModeSurroundingText},
+                {"Preedit", *config_.showModePreedit}, {"Emoji", *config_.showModeEmoji},         {"Off", *config_.showModeOff},
+                {"Default", *config_.showModeDefault}};
 
-            std::vector<LotusMode>                    enabledModes;
+            std::vector<LotusMode> enabledModes;
+            for (auto& name : order) {
+                name = canonicalModeKey(name);
+            }
             for (const auto& name : order) {
                 bool visible = false;
                 for (const auto& v : visibility) {
@@ -674,9 +695,7 @@ namespace fcitx {
                 }
                 if (visible) {
                     std::optional<LotusMode> mode = std::nullopt;
-                    if (name == "Smooth")
-                        mode = LotusMode::Smooth;
-                    else if (name == "Uinput")
+                    if (name == "Uinput")
                         mode = LotusMode::Uinput;
                     else if (name == "Minecraft")
                         mode = LotusMode::Minecraft;
@@ -688,8 +707,6 @@ namespace fcitx {
                         mode = LotusMode::Emoji;
                     else if (name == "Off")
                         mode = LotusMode::Off;
-                    else if (name == "SuperSmooth")
-                        mode = LotusMode::SuperSmooth;
                     else if (name == "Default")
                         mode = config().mode.value();
                     else
@@ -893,7 +910,7 @@ namespace fcitx {
             return;
 
         file << "# Lotus Per-App Configuration\n";
-        file << "# 0 = Off, 1 = Uinput (Smooth), 2 = Uinput (Slow), 3 = Uinput (Super Smooth), 4 = Surrounding Text, 5 = Preedit, 6 = Emoji Picker, 8 = Minecraft\n";
+        file << "# 0 = Off, 2 = Uinput (1 and 3 are read as Uinput too), 4 = Surrounding Text, 5 = Preedit, 6 = Emoji Picker, 8 = Minecraft\n";
         std::lock_guard<std::mutex> lock(appRulesMutex_);
         for (const auto& pair : appRules_) {
             bool currentIsCtx = isStartsWith(pair.first, "ctx_");
@@ -1002,18 +1019,19 @@ namespace fcitx {
         auto                                      getShortcut = [](const std::string& shortcut) { return Key(shortcut).sym(); };
 
         std::unordered_map<std::string, ModeInfo> modeMap = {
-            {"Smooth", {LotusMode::Smooth, _("Uinput (Smooth)"), getShortcut(*config_.shortcutSmooth), *config_.showModeSmooth}},
-            {"Uinput", {LotusMode::Uinput, _("Uinput (Slow)"), getShortcut(*config_.shortcutUinput), *config_.showModeUinput}},
+            {"Uinput", {LotusMode::Uinput, _("Uinput"), getShortcut(*config_.shortcutUinput), *config_.showModeUinput}},
             {"Minecraft", {LotusMode::Minecraft, _("Minecraft"), getShortcut(*config_.shortcutMinecraft), *config_.showModeMinecraft}},
             {"SurroundingText", {LotusMode::SurroundingText, _("Surrounding Text"), getShortcut(*config_.shortcutSurroundingText), *config_.showModeSurroundingText}},
             {"Preedit", {LotusMode::Preedit, _("Preedit"), getShortcut(*config_.shortcutPreedit), *config_.showModePreedit}},
             {"Emoji", {LotusMode::Emoji, _("Emoji Picker"), getShortcut(*config_.shortcutEmoji), *config_.showModeEmoji}},
             {"Off", {LotusMode::Off, _("OFF"), getShortcut(*config_.shortcutOff), *config_.showModeOff}},
-            {"SuperSmooth", {LotusMode::SuperSmooth, _("Uinput (Super Smooth)"), getShortcut(*config_.shortcutSuperSmooth), *config_.showModeSuperSmooth}},
             {"Default", {config_.mode.value(), _("Default Typing"), getShortcut(*config_.shortcutDefault), *config_.showModeDefault}}};
 
         std::vector<ModeInfo> allModes;
         auto                  order = stringutils::split(*config_.modeOrder, ",");
+        for (auto& name : order) {
+            name = canonicalModeKey(name);
+        }
         for (const auto& name : order) {
             auto it = modeMap.find(name);
             if (it != modeMap.end()) {
@@ -1110,14 +1128,12 @@ namespace fcitx {
         // Map mode to label
         std::string modeLabel;
         switch (mode) {
-            case LotusMode::Smooth: modeLabel = _("Uinput (Smooth)"); break;
-            case LotusMode::Uinput: modeLabel = _("Uinput (Slow)"); break;
+            case LotusMode::Uinput: modeLabel = _("Uinput"); break;
             case LotusMode::Minecraft: modeLabel = _("Minecraft"); break;
             case LotusMode::SurroundingText: modeLabel = _("Surrounding Text"); break;
             case LotusMode::Preedit: modeLabel = _("Preedit"); break;
             case LotusMode::Emoji: modeLabel = _("Emoji Picker"); break;
             case LotusMode::Off: modeLabel = _("OFF"); break;
-            case LotusMode::SuperSmooth: modeLabel = _("Uinput (Super Smooth)"); break;
             default: modeLabel = _("Unknown Mode"); break;
         }
 

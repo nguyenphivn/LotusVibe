@@ -136,7 +136,7 @@ namespace fcitx {
          */
         void send_backspace_uinput(int count) const;
 
-        // --- Super Smooth: wait for the app instead of sleeping (see handleUInputKeyPress) ---
+        // --- Uinput mode: wait for the app instead of sleeping (see handleUInputKeyPress) ---
         std::unique_ptr<HandlerTableEntry<EventHandler>> surr_wait_watcher_;
         std::unique_ptr<EventSourceTime>                 surr_wait_timer_;
         uint64_t                                         surr_wait_started_at_    = 0;

@@ -107,13 +107,13 @@ int main() {
     TestInstance       testInstance;
     fcitx::LotusEngine engine(&testInstance.instance);
     fcitx::RawConfig   config;
-    config.setValueByPath("Mode", "Uinput (Super Smooth)");
+    config.setValueByPath("Mode", "Uinput");
     config.setValueByPath("InputMethod", "Telex");
     config.setValueByPath("WaitSurroundingEvent", "True");
     config.setValueByPath("WaitSurroundingSettleMs", "40");
     engine.setConfig(config);
-    if (engine.config().mode.value() != fcitx::LotusMode::SuperSmooth || !engine.config().waitSurroundingEvent.value()) {
-        reportFailure("configure Super Smooth", "mode=SuperSmooth, WaitSurroundingEvent=True", "config differs");
+    if (engine.config().mode.value() != fcitx::LotusMode::Uinput || !engine.config().waitSurroundingEvent.value()) {
+        reportFailure("configure Uinput", "mode=Uinput, WaitSurroundingEvent=True", "config differs");
         return 1;
     }
 

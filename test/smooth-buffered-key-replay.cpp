@@ -140,7 +140,7 @@ namespace {
 
         void fail(const char* operation) {
             reportFailure(std::string(operation) + " replacement socket", "operation succeeds", std::string(operation) + " failed: " + std::strerror(errno),
-                          "the test cannot observe Smooth replacement requests");
+                          "the test cannot observe Uinput replacement requests");
             close(fd_);
             fd_ = -1;
         }
@@ -155,7 +155,7 @@ namespace {
         if (event.accepted() != requireAccepted) {
             reportFailure("process key " + std::to_string(symbol), "accepted=" + std::to_string(requireAccepted),
                           "accepted=" + std::to_string(event.accepted()) + ", commits=" + std::to_string(context.commits().size()),
-                          "Smooth buffered-key handling accepted or rejected the key unexpectedly");
+                          "Uinput buffered-key handling accepted or rejected the key unexpectedly");
             return false;
         }
         return true;
@@ -174,12 +174,12 @@ int main() {
     TestInstance       testInstance;
     fcitx::LotusEngine engine(&testInstance.instance);
     fcitx::RawConfig   config;
-    config.setValueByPath("Mode", "Uinput (Smooth)");
+    config.setValueByPath("Mode", "Uinput");
     config.setValueByPath("InputMethod", "Telex");
     engine.setConfig(config);
-    if (engine.config().mode.value() != fcitx::LotusMode::Smooth || engine.config().inputMethod.value() != "Telex") {
-        reportFailure("configure Smooth/Telex", "mode=Smooth, input method=Telex", "configured mode or input method differs",
-                      "the replay test cannot exercise Smooth Telex behavior");
+    if (engine.config().mode.value() != fcitx::LotusMode::Uinput || engine.config().inputMethod.value() != "Telex") {
+        reportFailure("configure Uinput/Telex", "mode=Uinput, input method=Telex", "configured mode or input method differs",
+                      "the replay test cannot exercise Uinput Telex behavior");
         return 1;
     }
 

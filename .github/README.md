@@ -21,27 +21,28 @@ Trang này chỉ ghi **những gì khác với bản gốc**. Hướng dẫn dù
 
 ## Nên dùng chế độ nào
 
-**Khuyên dùng `Uinput (Super Smooth)` làm chế độ gõ chính.** Đây là chế độ bản này dùng hằng ngày cho
-trình duyệt (Firefox, Edge), web app như Lark, và terminal như Alacritty.
+**Khuyên dùng `Uinput` làm chế độ gõ chính.** Đây là chế độ bản này dùng hằng ngày cho trình duyệt
+(Firefox, Edge), web app như Lark, và terminal như Alacritty.
 
-- Đặt chung: trong cài đặt Lotus chọn chế độ mặc định là `Uinput (Super Smooth)`. Nếu sửa tay
-  `~/.config/fcitx5/conf/lotus.conf` thì phải ghi đúng tên hiển thị `Mode=Uinput (Super Smooth)`,
-  ghi sai tên Lotus sẽ lặng lẽ quay về Preedit.
-- Đặt theo từng app: trong `~/.config/fcitx5/conf/lotus-app-rules.conf` dùng số `3`, ví dụ
-  `firefox=3`.
+- Đặt chung: trong cài đặt Lotus chọn chế độ mặc định là `Uinput`. Nếu sửa tay
+  `~/.config/fcitx5/conf/lotus.conf` thì ghi `Mode=Uinput`; ghi sai tên Lotus sẽ lặng lẽ quay về
+  Preedit.
+- Đặt theo từng app: trong `~/.config/fcitx5/conf/lotus-app-rules.conf` dùng số `2`, ví dụ
+  `firefox=2`.
 - Kiểu gõ chính là **Telex** (`InputMethod=Telex` trong `lotus.conf`). Mọi lượt đo và dùng hằng ngày
   của bản này đều gõ Telex; VNI và các kiểu gõ khác chưa kiểm.
 - Không khuyên chế độ Surrounding Text: bản này không sửa chế độ đó.
 - Lời khuyên này chỉ đúng cho bản fork. Super Smooth của bản gốc chưa có vá chống lặp chữ ở thanh
   địa chỉ trình duyệt.
 
-**Dự định:** gộp ba chế độ uinput (`Uinput (Smooth)`, `Uinput (Super Smooth)`, `Uinput (Slow)`)
-thành **một chế độ uinput duy nhất**, lấy Super Smooth làm gốc, vì nó đã gần như hoàn hảo trong dùng
-hằng ngày. **Chưa làm.**
+**Chỉ còn một chế độ uinput (24/09).** Ba chế độ `Uinput (Smooth)`, `Uinput (Super Smooth)` và
+`Uinput (Slow)` của bản gốc đã gộp thành một chế độ `Uinput`, chạy đúng như Super Smooth. Cấu hình cũ
+tự chuyển: tên chế độ cũ trong `lotus.conf` và số `1`, `2`, `3` trong `lotus-app-rules.conf` đều đọc
+thành `Uinput`. Ai đang dùng Slow sẽ chờ 4 ms mỗi phím xoá thay vì 8 ms.
 
 ## Gõ nhanh hơn bản gốc ở đâu (chế độ uinput)
 
-Cải thiện chính của bản này nằm ở **chế độ uinput** (Smooth, Super Smooth): thay chữ nhanh hơn và
+Cải thiện chính của bản này nằm ở **chế độ uinput**: thay chữ nhanh hơn và
 không lặp chữ. Chế độ Surrounding Text **không** được sửa.
 
 Mọi số trong bảng dưới đây đo trên máy gốc (CachyOS, KDE Plasma Wayland). Mỗi dòng đo riêng một thay đổi, ở
@@ -60,7 +61,7 @@ Nói cho đúng:
 - App Wayland thuần không đi qua dòng thứ ba nên không đổi.
 - Khoảng cách phím xoá 0 ms là lựa chọn riêng của bản này. Máy đo chưa kiểm được trường hợp phím
   xoá chen vào đúng lúc đang gõ nhanh; bằng chứng cho mức này là dùng tay hằng ngày.
-- Chế độ Smooth chờ app bằng hẹn giờ thay vì bắt cả fcitx5 đứng chờ. Ở bản gốc, khoảng 4% số phím
+- Chế độ uinput chờ app bằng hẹn giờ thay vì bắt cả fcitx5 đứng chờ. Ở bản gốc, khoảng 4% số phím
   làm fcitx5 đứng từ 8 ms trở lên, lâu nhất 22 ms (đo 428 phím). Mức cải thiện của đúng thay đổi này
   chưa đo riêng.
 - Trình duyệt dùng Super Smooth. Chủ máy gõ tay thấy nhanh hơn Smooth; chưa có số đo thời gian.
@@ -106,8 +107,8 @@ Chưa đo Firefox và Chrome. Đã báo cả hai cách ở #267, chưa gửi mã
 
 - **Hết lặp chữ đầu ở thanh địa chỉ trình duyệt với chế độ uinput** (gõ `tôi` ra `toôi`, `ê` ra
   `eê`, kiểu issue #190). Ở Chromium/Edge đã sửa triệt để, vì trình duyệt báo đúng phần tự điền. Ở
-  Firefox sửa theo hình dạng ô nhập, đo 7/7 lần có gợi ý ra đúng. Super Smooth vẫn giữ nguyên bản ở
-  mọi ô khác. Chưa gửi lên bản gốc.
+  Firefox sửa theo hình dạng ô nhập, đo 7/7 lần có gợi ý ra đúng. Mọi ô khác vẫn bỏ lá chắn
+  để gõ nhanh như Super Smooth của bản gốc. Chưa gửi lên bản gốc.
 - **Bỏ khoảng chờ vô ích ở app không có surrounding text.** Edge chạy qua XWayland: độ trễ trung vị
   12,8 → 6,9 ms. Bản gốc từ chối (#490).
 - **Chữ V hết màu đen trên panel tối của KDE** (issue #374, gặp ngay với giao diện mặc định Fedora
@@ -122,7 +123,7 @@ Chưa đo Firefox và Chrome. Đã báo cả hai cách ở #267, chưa gửi mã
   0/60; Calc, Impress 0/60. Đã báo ở #162, chưa gửi mã.
 - **Gõ được Messenger trên Facebook với chế độ uinput** — bốn nguyên nhân và cách chữa ở
   [mục trên](#messenger-trên-facebook-bôi-đen-rồi-gõ-đè-thay-vì-xoá-rồi-gõ-2009).
-- **Chờ 4 ms mỗi phím xoá thay vì 2** ở Smooth và Super Smooth. Máy tải nặng: 2 ms đúng 39–46/60
+- **Chờ 4 ms mỗi phím xoá thay vì 2** ở chế độ uinput. Máy tải nặng: 2 ms đúng 39–46/60
   câu, 4 ms đúng 58–60/60. Máy rảnh không khác.
 
 ### Đang chờ tác giả gốc trả lời

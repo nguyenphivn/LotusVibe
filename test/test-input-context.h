@@ -48,7 +48,7 @@
  *
  *     // 3. Set engine mode and input method
  *     fcitx::RawConfig config;
- *     config.setValueByPath("Mode", "Preedit"); // or "Surrounding", "Smooth", "Off"
+ *     config.setValueByPath("Mode", "Preedit"); // or "Surrounding", "Uinput", "Off"
  *     config.setValueByPath("InputMethod", "Telex");
  *     engine.setConfig(config);
  *
@@ -200,7 +200,7 @@ struct TestInstance {
  * @brief Runs the instance's event loop for `ms` milliseconds.
  *
  * Tests call `keyEvent()` directly, so timers the engine schedules with
- * `addTimeEvent()` (Smooth mode waits for the app between the last backspace
+ * `addTimeEvent()` (Uinput mode waits for the app between the last backspace
  * and the commit) never fire unless the loop runs, as it does in real fcitx5.
  *
  * `EventLoop::exec()` cannot be used for this: after `exit()` an sd-event loop

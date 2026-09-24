@@ -259,6 +259,12 @@ Vá bỏ phụ thuộc X11 từng nằm ở đây đã vào bản gốc, nên kh
 - **`07cca04` máy chủ hiểu `LOTUS_SOCKET_NAMESPACE`** giống mô-đun. Nhờ vậy chạy được một cặp
   mô-đun + máy chủ riêng bên cạnh bản đóng gói sẵn, không giẫm chân nhau.
 - **`7795460` núm vặn `LOTUS_BACKSPACE_GAP_MS`** để đo nhịp gửi phím xoá.
+- **Gộp ba chế độ uinput thành một chế độ `Uinput` (24/09).** Chạy đúng như Super Smooth: chờ 4 ms
+  mỗi phím xoá, bỏ lá chắn tự điền trừ thanh địa chỉ. Người đang dùng Slow mất mức chờ 8 ms. Cấu hình
+  cũ tự chuyển khi nạp (tên trong `lotus.conf`, số `1`/`3` trong luật theo app, tên trong
+  `ModeOrder`); bài `uinput_mode_migration` đỏ đúng 5 chỗ trên mã cũ. Bỏ tuỳ chọn
+  `ShowModeSmooth`, `ShortcutSmooth`, `ShowModeSuperSmooth`, `ShortcutSuperSmooth`; phím tắt mặc
+  định của `Uinput` thành `1`. Không gửi upstream: bản gốc giữ ba chế độ.
 - **`42d7529` khoảng cách phím xoá mặc định 0 ms thay vì 5.** Đo `khoang_cach_xoa.py macdinh`:
   0,10 ms, 8/8 trên bốn đích. **Đây là lựa chọn riêng của máy này, không phải đề xuất cho
   upstream** — mức đề xuất cho upstream là 2 ms, vì mức 0 bỏ hẳn yêu cầu khe im lặng. Dấu hiệu
@@ -684,26 +690,23 @@ GNOME gốc Fedora/Arch; GNOME Wayland; tiện ích làm thanh trong suốt khá
 
 ## Cấu hình nên đặt kèm
 
-**Khuyên dùng `Uinput (Super Smooth)` làm chế độ gõ chính** (chủ máy chốt 13/09/2026). Trong
-`lotus.conf` phải ghi đúng tên hiển thị `Mode=Uinput (Super Smooth)`; ghi `Mode=SuperSmooth` hay tên
-sai khác thì Lotus lặng lẽ quay về Preedit. Trong `lotus-app-rules.conf` dùng số `3`.
+**Khuyên dùng `Uinput` làm chế độ gõ chính** (chủ máy chốt 13/09/2026, gộp còn một chế độ 24/09).
+Trong `lotus.conf` ghi `Mode=Uinput`; tên sai khác thì Lotus lặng lẽ quay về Preedit (ba tên cũ
+`Uinput (Smooth)`, `Uinput (Slow)`, `Uinput (Super Smooth)` vẫn đọc được). Trong
+`lotus-app-rules.conf` dùng số `2`; số `1` và `3` cũ cũng đọc thành `Uinput`.
 
 **Kiểu gõ chính là Telex** (`InputMethod=Telex` trong `lotus.conf`), trên cả hai máy. Mọi số đo trong
 tệp này đều gõ Telex. Kiểu gõ ảnh hưởng tới lỗi: Telex bỏ dấu sau cả chữ nên hay phải thay nhiều ký tự một lúc, đúng
 trường hợp LibreOffice ở nhóm E sai. Tác giả gốc dùng VNI, và ở #162 nói nhờ vậy ít gặp lỗi của chế độ
 Surrounding Text. VNI chưa kiểm trên bản này.
 
-**Dự định:** gộp ba chế độ uinput (`Uinput (Smooth)`, `Uinput (Super Smooth)`, `Uinput (Slow)`)
-thành một chế độ uinput duy nhất, lấy Super Smooth làm gốc. Chưa làm, chưa có kế hoạch kỹ thuật.
+Luật theo app đang dùng trên máy này (ghi trước khi gộp, số `3` giờ đọc thành `Uinput`):
 
-Luật theo app đang dùng trên máy này:
-
-- **`firefox=3`** và **`microsoft-edge=3`** (Super Smooth). Chỉ đặt 3 được khi có vá ở nhóm E. Dùng
-  bản Lotus gốc thì đặt `firefox=1` (Smooth), vì Super Smooth gốc không có lá chắn chống lặp chữ ở
-  thanh địa chỉ. Lark chạy trong Firefox nên cũng theo luật này.
-- **`Alacritty=3`**. Lá chắn chỉ liên quan ô có tự điền, mà cửa sổ dòng lệnh không có tự điền,
-  nên Super Smooth không thiệt gì.
-- **`soffice=3`** trên máy iMac. Vá LibreOffice ở nhóm E chạy được cả Smooth lẫn Super Smooth.
+- **`firefox=3`** và **`microsoft-edge=3`**. Dùng bản Lotus gốc thì đặt `firefox=1` (Smooth), vì
+  Super Smooth gốc không có lá chắn chống lặp chữ ở thanh địa chỉ. Lark chạy trong Firefox nên cũng
+  theo luật này.
+- **`Alacritty=3`**. Lá chắn chỉ liên quan ô có tự điền, mà cửa sổ dòng lệnh không có tự điền.
+- **`soffice=3`** trên máy iMac.
 
 ## Những gì bản này KHÔNG sửa
 

@@ -18,7 +18,7 @@
 #include <chrono>
 
 // Global variables
-std::atomic<fcitx::LotusMode> realMode{fcitx::LotusMode::Smooth};
+std::atomic<fcitx::LotusMode> realMode{fcitx::LotusMode::Uinput};
 std::atomic<bool>             needEngineReset{false};
 std::atomic<bool>             g_mouse_clicked{false};
 std::atomic<bool>             is_deleting_{false};
@@ -71,7 +71,7 @@ bool isBackspace(uint32_t sym) {
 }
 
 bool isUinputMode(fcitx::LotusMode mode) {
-    return mode == fcitx::LotusMode::Uinput || mode == fcitx::LotusMode::Smooth || mode == fcitx::LotusMode::SuperSmooth || mode == fcitx::LotusMode::Minecraft;
+    return mode == fcitx::LotusMode::Uinput || mode == fcitx::LotusMode::Minecraft;
 }
 
 int compareAndSplitStrings(const std::string& A, const std::string& B, std::string& deletedPart, std::string& addedPart) {

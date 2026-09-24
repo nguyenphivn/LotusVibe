@@ -112,7 +112,7 @@ namespace {
       private:
         void fail(const char* operation) {
             reportFailure(std::string(operation) + " replacement socket", "operation succeeds", std::string(operation) + " failed: " + std::strerror(errno),
-                          "the test cannot observe Smooth replacement requests");
+                          "the test cannot observe Uinput replacement requests");
             close(fd_);
             fd_ = -1;
         }
@@ -156,7 +156,7 @@ int main(int argc, char** argv) {
     TestInstance       testInstance;
     fcitx::LotusEngine engine(&testInstance.instance);
     fcitx::RawConfig   config;
-    config.setValueByPath("Mode", "Uinput (Smooth)");
+    config.setValueByPath("Mode", "Uinput");
     config.setValueByPath("InputMethod", "Telex");
     engine.setConfig(config);
 
@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
 
     // Reproduces #472: a held 'd' under Telex.
     //
-    // The window model matters. In Smooth mode the uinput server passes the
+    // The window model matters. In Uinput mode the uinput server passes the
     // physical keystroke straight to the application, so every press shows up
     // there on its own; Lotus only corrects afterwards with backspaces and a
     // commit. Counting commits alone would understate what the user sees.
@@ -234,7 +234,7 @@ int main(int argc, char** argv) {
         std::cerr << "['" << commit << "']";
     std::cerr << "\nforwarded: " << context->forwarded().size() << "\nwindow shows: '" << text << "' (" << screen.size() << " characters)\n";
 
-    // Outside Smooth mode a held key keeps appending, so the window grows with
+    // Outside Uinput mode a held key keeps appending, so the window grows with
     // the number of presses. #472 reports that it stops instead.
     if (screen.size() < 3) {
         reportFailure("held key accumulates", "at least 3 characters after " + std::to_string(sent) + " presses", "window shows '" + text + "'",

@@ -1007,11 +1007,11 @@ namespace fcitx {
                 surrounding.isValid() && !surrText.empty() && surrounding.cursor() == utf8::length(surrText);
         if (!isSurrText && realMode != LotusMode::Minecraft) {
             ++expected_backspaces_;
-            // Super Smooth skips the autofill guard everywhere for speed, but browser address bars
+            // Uinput mode skips the autofill guard everywhere for speed, but browser address bars
             // still need it (doubled first letter, #190). Chromium sets the Url flag; Firefox does not,
-            // so recognise its autofill tail by shape. Every other field keeps Super Smooth behaviour.
+            // so recognise its autofill tail by shape. Every other field skips it.
             const bool isFirefoxAddressBar = ic_->program() == "firefox" && textAfterCursorLooksLikeUrl(surrounding);
-            const bool checkAutofill       = realMode != LotusMode::SuperSmooth || ic_->capabilityFlags().test(CapabilityFlag::Url) || isFirefoxAddressBar;
+            const bool checkAutofill       = realMode != LotusMode::Uinput || ic_->capabilityFlags().test(CapabilityFlag::Url) || isFirefoxAddressBar;
             if (checkAutofill) {
                 // Enable Autofill detection for all frontends (Wayland/IBus).
                 // This fixes the "toôi" duplication bug in Chromium-based search bars.
@@ -1383,7 +1383,7 @@ namespace fcitx {
 
                 break;
             }
-            default: { // Uinput, Smooth, Preedit, etc.
+            default: { // Uinput, Preedit, etc.
                 performReplacement(" ", ". ");
                 LOTUS_INFO("Commit: . ");
                 break;
@@ -1405,7 +1405,7 @@ namespace fcitx {
                 LOTUS_INFO("Commit: — (em-dash)");
                 break;
             }
-            default: { // Uinput, Smooth, Preedit, etc.
+            default: { // Uinput, Preedit, etc.
                 performReplacement("-", emDash);
                 LOTUS_INFO("Commit: — (em-dash)");
                 break;
@@ -1616,7 +1616,7 @@ namespace fcitx {
             if (isBackspace(currentSym)) {
                 if (realtextLen.load(std::memory_order_acquire) > 0)
                     realtextLen.fetch_sub(1, std::memory_order_acq_rel);
-                if (handleUInputKeyPress(keyEvent, currentSym, (realMode == LotusMode::Smooth || realMode == LotusMode::SuperSmooth) ? 4 : 8)) {
+                if (handleUInputKeyPress(keyEvent, currentSym, realMode == LotusMode::Uinput ? 4 : 8)) {
                     return;
                 }
             } else {
@@ -1661,10 +1661,8 @@ namespace fcitx {
         }
 
         switch (realMode) {
-            case LotusMode::Uinput:
-            case LotusMode::Smooth:
             case LotusMode::Minecraft:
-            case LotusMode::SuperSmooth: {
+            case LotusMode::Uinput: {
                 handleUinputMode(keyEvent, currentSym);
                 break;
             }
@@ -1728,10 +1726,8 @@ namespace fcitx {
                 break;
             }
             case LotusMode::SurroundingText:
-            case LotusMode::Uinput:
-            case LotusMode::Smooth:
             case LotusMode::Minecraft:
-            case LotusMode::SuperSmooth: {
+            case LotusMode::Uinput: {
                 ic_->inputPanel().reset();
                 break;
             }
@@ -1762,11 +1758,9 @@ namespace fcitx {
                 ic_->updatePreedit();
                 break;
             }
-            case LotusMode::Uinput:
-            case LotusMode::Smooth:
             case LotusMode::SurroundingText:
             case LotusMode::Minecraft:
-            case LotusMode::SuperSmooth: {
+            case LotusMode::Uinput: {
                 if (lotusEngine_) {
                     ResetEngine(lotusEngine_.handle());
                 }

@@ -38,9 +38,7 @@ namespace {
         switch (mode) {
             case fcitx::LotusMode::Off: return "Off";
             case fcitx::LotusMode::Preedit: return "Preedit";
-            case fcitx::LotusMode::Smooth: return "Smooth";
             case fcitx::LotusMode::Uinput: return "Uinput";
-            case fcitx::LotusMode::SuperSmooth: return "SuperSmooth";
             case fcitx::LotusMode::SurroundingText: return "SurroundingText";
             case fcitx::LotusMode::Emoji: return "Emoji";
             case fcitx::LotusMode::Minecraft: return "Minecraft";

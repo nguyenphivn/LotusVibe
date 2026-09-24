@@ -22,15 +22,7 @@ msgid "OFF"
 msgstr ""
 
 #: src/lotus-config.h:40 src/lotus-engine.cpp:983 src/lotus-engine.cpp:1091
-msgid "Uinput (Smooth)"
-msgstr ""
-
-#: src/lotus-config.h:40 src/lotus-engine.cpp:990 src/lotus-engine.cpp:1098
-msgid "Uinput (Super Smooth)"
-msgstr ""
-
-#: src/lotus-config.h:40 src/lotus-engine.cpp:984 src/lotus-engine.cpp:1092
-msgid "Uinput (Slow)"
+msgid "Uinput"
 msgstr ""
 
 #: src/lotus-config.h:40 src/lotus-engine.cpp:986 src/lotus-engine.cpp:1094
@@ -199,27 +191,11 @@ msgid "Custom Dictionary"
 msgstr ""
 
 #: src/lotus-config.h:249
-msgid "Show Uinput (Smooth)"
+msgid "Show Uinput"
 msgstr ""
 
 #: src/lotus-config.h:250
-msgid "Shortcut for Uinput (Smooth)"
-msgstr ""
-
-#: src/lotus-config.h:251
-msgid "Show Uinput (Slow)"
-msgstr ""
-
-#: src/lotus-config.h:252
-msgid "Shortcut for Uinput (Slow)"
-msgstr ""
-
-#: src/lotus-config.h:253
-msgid "Show Uinput (Super Smooth)"
-msgstr ""
-
-#: src/lotus-config.h:254
-msgid "Shortcut for Uinput (Super Smooth)"
+msgid "Shortcut for Uinput"
 msgstr ""
 
 #: src/lotus-config.h:255
