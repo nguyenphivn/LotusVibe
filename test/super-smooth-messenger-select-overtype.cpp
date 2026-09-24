@@ -221,7 +221,35 @@ int main() {
         fcitx::InputContextEvent leave(context.get(), fcitx::EventType::InputContextFocusOut);
         engine.reset(entry, leave);
     }
-    // A plain field has no "\n\n" after the cursor: it keeps deleting with backspaces.
+    // The Facebook post composer, editing in the middle of pasted text: the rest of the post follows the
+    // cursor, but the field still ends in "\n\n" like every Facebook composer report (log 24/09: 2787
+    // mid-text and 2207 end-of-text reports, all ending "\n\n"). Deleting there lost the replacement
+    // ("đây là bản fork" came out "ây l bn fork"); Edge confirmed the selection in 7 ms at the end of
+    // the same post, so it must select here too.
+    const std::string postTail = "\n\nMình đã sửa gần hết\n\n";
+    setSnapshot(*context, "Mời anh em " + postTail, 11);
+    if (!typeLetters("cu", "Mời anh em ", postTail))
+        return 1;
+    if (!type(engine, entry, *context, FcitxKey_w, true))
+        return 1;
+    if (!listener.receive(request))
+        return 1;
+    if (request != -1) {
+        reportFailure("select in the middle of a Facebook post", "-1", std::to_string(request));
+        return 1;
+    }
+    setSelection("Mời anh em cu" + postTail, 13, 12);
+    pumpEventLoop(testInstance.instance, 10);
+    if (context->commits().empty() || context->commits().back() != "ư") {
+        reportFailure("type over the selection in the middle of a Facebook post", "last commit 'ư'", "commits=" + joinCommits(*context));
+        return 1;
+    }
+    {
+        fcitx::InputContextEvent leave(context.get(), fcitx::EventType::InputContextFocusOut);
+        engine.reset(entry, leave);
+    }
+
+    // A plain field does not end in "\n\n": it keeps deleting with backspaces.
     setSnapshot(*context, "cu", 2);
     if (!typeLetters("cu", "", ""))
         return 1;

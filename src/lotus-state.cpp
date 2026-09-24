@@ -592,6 +592,18 @@ namespace fcitx {
             return std::string(it, t.end()) == "\n\n";
         }
 
+        // Mọi ô soạn của Facebook (tin nhắn Messenger, ô đăng bài) báo cả ô kết thúc bằng "\n\n", con trỏ ở
+        // đâu cũng vậy: log 24/09 ô đăng bài, 2787 ảnh con trỏ giữa đoạn và 2207 ảnh cuối đoạn, không ảnh nào
+        // khác. Sửa giữa đoạn thì sau con trỏ còn cả phần bài phía sau, nên hình "\n\n ngay sau con trỏ" không
+        // nhận ra ô này. Xoá hết thì cả ô chỉ còn "\n".
+        bool giongOSoanFacebook(const SurroundingText& s) {
+            if (!s.isValid()) {
+                return false;
+            }
+            const std::string& t = s.text();
+            return t == "\n" || (t.size() >= 2 && t.compare(t.size() - 2, 2, "\n\n") == 0);
+        }
+
         // Chưa có dấu cách hay xuống dòng trước con trỏ = đang gõ từ đầu tiên của tin nhắn.
         bool laTuDauTin(const SurroundingText& s) {
             const std::string& t   = s.text();
@@ -966,9 +978,11 @@ namespace fcitx {
         }
         const auto&       surrounding = ic_->surroundingText();
         const std::string surrText    = surrounding.text();
-        // Chỉ ô soạn tin Messenger: đo 20/09, các ô khác có khai chữ chung quanh nhưng KHÔNG khai lại
-        // khi chỉ bôi đen (150 ms không một tin nào) ⇒ bật ra mọi ô là mất dấu toàn máy.
-        if (engine_->config().messengerSelectOvertype.value() && realMode != LotusMode::Minecraft && giongOSoanTinMessenger(surrounding)) {
+        // Chỉ ô soạn của Facebook: đo 20/09, các ô khác có khai chữ chung quanh nhưng KHÔNG khai lại
+        // khi chỉ bôi đen (150 ms không một tin nào) ⇒ bật ra mọi ô là mất dấu toàn máy. Ô đăng bài khai
+        // lại như ô tin nhắn (24/09: bôi đen xác nhận sau 7 ms); sửa giữa đoạn mà xoá rồi giao thì mất
+        // chữ ("đây là bản fork" ra "ây l bn fork"), nên nhận ô theo đuôi cả ô, không theo phần sau con trỏ.
+        if (engine_->config().messengerSelectOvertype.value() && realMode != LotusMode::Minecraft && giongOSoanFacebook(surrounding)) {
             boiDenRoiGoDe(addedPart, static_cast<int>(utf8::length(deletedPart)));
             return;
         }

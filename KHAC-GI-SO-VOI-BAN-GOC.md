@@ -633,6 +633,18 @@ giờ được xác nhận, đòi sau `ư` phải ra đúng `" d"`. Trên mã c�
 `buffered_keys_.clear()` cũng đỏ đúng bước đó. ctest 21/21. Máy gõ 50 câu: sai 0/50, 660/660 vùng chọn
 được xác nhận — lượt này không có lần chạm hạn, nên đường trả phím mới chỉ được bài kiểm chứng minh.
 
+**Ô đăng bài Facebook, sửa giữa đoạn (24/09).** Dán một đoạn vào ô đăng bài rồi gõ "đây là bản fork"
+chèn trước một dòng có sẵn thì ra "ây l bn fork". Log có ghi ảnh ô: sau con trỏ còn cả phần bài phía
+sau, nên hình "chỉ có `\n\n` ngay sau con trỏ" không khớp, bộ gõ đi đường xoá rồi giao. Facebook báo
+xoá xong, chữ giao 4–5 ms sau thì mất (`đ`, `ả`, `à`, `đi`, `á`). Gõ ở cuối cùng bài đó thì khớp hình,
+đi đường bôi đen, Edge báo vùng chọn sau 7 ms và chữ vào đúng. Nên ô này **có** báo lại khi bôi đen,
+chỉ là không được nhận ra. Trên 5.000 ảnh của ô soạn Facebook trong log, ảnh nào cũng kết thúc bằng
+`\n\n` dù con trỏ ở đâu (2787 giữa đoạn, 2207 cuối đoạn); 27 ảnh không khớp đều là danh sách tin
+nhắn. Vá: quyết định bôi đen nhận ô theo **đuôi cả ô** (`giongOSoanFacebook`), không theo phần sau
+con trỏ. Mức chờ lắng theo giờ vẫn giữ hình cũ, không nới. Bài kiểm thêm bước "ô đăng bài, giữa
+đoạn": mã cũ đỏ đúng bước đó (máy chủ nhận 2 thay vì -1); cho hàm nhận mọi ô thì đỏ ở bước "ô
+thường vẫn xoá bằng phím xoá". Chưa đo trên máy gõ tự động.
+
 **Upstream:** đã báo cách khắc phục ở #267 (17/09; cập nhật 19/09: nguyên nhân (3) và (4), đề xuất 60 ms; fork tự dùng 40 ms giữa câu, 60 ms từ đầu; 20/09: bình luận mới về cách bôi đen rồi gõ đè), chưa gửi mã.
 
 ### Icon chữ V màu đen trên thanh trên cùng của GNOME
