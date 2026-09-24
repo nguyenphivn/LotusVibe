@@ -114,11 +114,18 @@ bài:
 ```
 cmake -B build-test -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 cmake --build build-test -j8
-unshare -Urn ctest --test-dir build-test        # phải ra 13/13
+unshare -Urn ctest --test-dir build-test        # phải ra 21/21 (đếm 24/09)
 ```
 
-Bản gốc `dev` chạy 9 bài. Bản này 13: thêm hai bài kiểm ở nhóm D, bài kiểm của vá icon KDE ở
-nhóm E (mã vá đã vào bản gốc, bài kiểm thì chưa), và bài kiểm của vá icon GNOME.
+Bản gốc `dev` chạy 9 bài. Bản này 21: thêm hai bài kiểm ở nhóm D, bài kiểm của vá icon KDE ở
+nhóm E (mã vá đã vào bản gốc, bài kiểm thì chưa), bài kiểm của vá icon GNOME, và các bài kiểm của vá
+Messenger ở nhóm E.
+
+Mỗi bài tự chép từ điển chính tả trong mã nguồn (`data/dictionaries/vietnamese.cm.dict`) vào thư mục
+tạm riêng của nó (`e5dd085`). Trước đó bài kiểm lén đọc từ điển **đã cài trên máy**: máy có cài Lotus
+thì xanh, hộp đóng gói sạch thì `super_smooth_settle_first_word` đỏ, vì thiếu từ điển bộ gõ coi "chư"
+là chữ lạ và trả về "uw" khi gõ dấu cách. Đo 24/09 trong hộp Fedora 44, cùng một bản build: không có
+file đỏ 5/5, có file xanh 5/5. Đây không phải lỗi giờ giấc, nới giờ chờ không chữa được.
 
 ## Hiệu năng so với bản gốc (chế độ uinput)
 
@@ -260,8 +267,7 @@ Vá bỏ phụ thuộc X11 từng nằm ở đây đã vào bản gốc, nên kh
 
 ## Nhóm D — bộ kiểm thêm vào
 
-Sáu commit. Hai bài kiểm mới ở đây, cộng hai bài kiểm của vá icon KDE và GNOME ở nhóm E, là lý do bản
-này chạy 13 bài thay vì 9.
+Sáu commit, cộng một vá hạ tầng kiểm (`e5dd085`, từ điển, xem mục "Dựng và chạy bộ kiểm").
 
 - **`1ed7339`** bài kiểm bất biến trên chuỗi phím ngẫu nhiên.
 - **`581fa75`** đối chứng dương cho các bất biến P2 đến P5, tức chứng minh bài kiểm THẤY được
