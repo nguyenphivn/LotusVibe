@@ -12,7 +12,10 @@ Trang này chỉ ghi **những gì khác với bản gốc**. Hướng dẫn dù
 [README của bản gốc](https://github.com/nguyenphivn/LotusVibe/blob/ban-dung/README.md) hoặc
 [trang chủ Lotus](https://lotusinputmethod.github.io/).
 
-- **Vá mới nhất (20/09): Messenger trên Facebook hết mất chữ** — bộ gõ bôi đen chữ cần bỏ bằng
+- **Mới (24/09): chỉ còn một chế độ uinput.** Ba chế độ `Uinput (Smooth)`, `Uinput (Super Smooth)`
+  và `Uinput (Slow)` gộp thành một chế độ `Uinput`, chạy như Super Smooth. Cấu hình cũ tự chuyển,
+  không phải chỉnh gì. [Xem bên dưới](#nên-dùng-chế-độ-nào).
+- **Vá Messenger (20/09): Messenger trên Facebook hết mất chữ** — bộ gõ bôi đen chữ cần bỏ bằng
   Shift+Mũi tên trái rồi gõ đè, thay vì xoá trước rồi gõ sau. Đo 861 lần thay chữ, 0 lần mất.
   [Xem bên dưới](#messenger-trên-facebook-bôi-đen-rồi-gõ-đè-thay-vì-xoá-rồi-gõ-2009).
 - **Nhánh để dùng:** `ban-dung` (nhánh mặc định) = `dev` của bản gốc + 23 miếng vá.
@@ -49,11 +52,11 @@ Mọi số trong bảng dưới đây đo trên máy gốc (CachyOS, KDE Plasma 
 thời điểm và app khác nhau, nên **không cộng dồn** thành một con số chung. Chưa có phép đo trọn vẹn
 so nhánh `ban-dung` hiện tại với bản gốc.
 
-| Đo cái gì | Bản gốc → bản này | Đo ở đâu |
-| --- | --- | --- |
-| Thời gian thay một từ, xoá 2 / 3 / 4 chữ | 14,5 / 21,8 / 31,2 ms → 12,4 / 16,3 / 20,5 ms | Konsole, Smooth, 8/8 mỗi mức, bản trước khi gom (khoảng cách phím xoá còn 2 ms) |
-| Khoảng cách giữa hai phím xoá (trung vị) | 5,2 ms → 0,1 ms | Konsole, ô soạn Edge, Firefox, Edge qua XWayland, 8/8 |
-| Chờ vô ích ở app không có surrounding text (trung vị) | 12,8 ms → 6,9 ms | Edge chạy qua XWayland, 16/16 |
+| Đo cái gì                                             | Bản gốc → bản này                             | Đo ở đâu                                                                        |
+| ----------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------- |
+| Thời gian thay một từ, xoá 2 / 3 / 4 chữ              | 14,5 / 21,8 / 31,2 ms → 12,4 / 16,3 / 20,5 ms | Konsole, Smooth, 8/8 mỗi mức, bản trước khi gom (khoảng cách phím xoá còn 2 ms) |
+| Khoảng cách giữa hai phím xoá (trung vị)              | 5,2 ms → 0,1 ms                               | Konsole, ô soạn Edge, Firefox, Edge qua XWayland, 8/8                           |
+| Chờ vô ích ở app không có surrounding text (trung vị) | 12,8 ms → 6,9 ms                              | Edge chạy qua XWayland, 16/16                                                   |
 
 Nói cho đúng:
 
@@ -84,11 +87,11 @@ Facebook không còn chỗ chen vào. Quan trọng hơn: Edge **báo lại** "đ
 
 Đo 20/09 bằng máy gõ tự động, lúc máy bận:
 
-| | Chờ theo đồng hồ (40/60 ms) | Bôi đen rồi gõ đè |
-| --- | --- | --- |
-| 100 từ đầu tiên của tin nhắn | sai 0 | sai 0 |
-| 50 câu đầy đủ | sai 1 | sai 0 |
-| Chờ mỗi lần bỏ dấu | 40 ms, từ đầu 60 ms | 3–20 ms, thường 6 ms |
+|                              | Chờ theo đồng hồ (40/60 ms) | Bôi đen rồi gõ đè    |
+| ---------------------------- | --------------------------- | -------------------- |
+| 100 từ đầu tiên của tin nhắn | sai 0                       | sai 0                |
+| 50 câu đầy đủ                | sai 1                       | sai 0                |
+| Chờ mỗi lần bỏ dấu           | 40 ms, từ đầu 60 ms         | 3–20 ms, thường 6 ms |
 
 Bật bằng `MessengerSelectOvertype=True` (cần `WaitSurroundingEvent=True`). Ba điều cần biết:
 
