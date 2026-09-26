@@ -7,6 +7,7 @@
  */
 
 #include "lotus-server.h"
+#include "lotus-key-request.h"
 #include "lotus-logger.h"
 
 #include <cstdlib>
@@ -391,11 +392,16 @@ int main(int argc, char* argv[]) {
                 LotusLogger::instance().warn("Keyboard client disconnected or connection error");
                 kb_client_fd.reset(-1);
                 fds[KB_CLIENT_INDEX].fd = -1;
-            } else if (count < 0) {
-                uinput.send_select(-count); // negative = select |count| chars
             } else {
-                pending_backspaces += count - 1;
-                uinput.send_backspace();
+                const KeyRequest request = parseKeyRequest(n, count);
+                if (request.kind == KeyRequest::Kind::Select) {
+                    uinput.send_select(request.count);
+                } else if (request.kind == KeyRequest::Kind::Backspace) {
+                    pending_backspaces += request.count - 1;
+                    uinput.send_backspace();
+                } else {
+                    LotusLogger::instance().warn("Ignoring invalid key request: " + std::to_string(count) + " (" + std::to_string(n) + " bytes)");
+                }
             }
         }
 
