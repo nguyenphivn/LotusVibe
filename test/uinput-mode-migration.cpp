@@ -44,11 +44,20 @@ int main() {
             return 1;
         }
         file << "Mode=\"Uinput (Super Smooth)\"\n";
+        file << "ModeOrder=Smooth,Uinput,Minecraft,SurroundingText,Preedit,Emoji,Off,SuperSmooth,Default\n";
     }
 
     TestInstance       testInstance;
     fcitx::LotusEngine engine(&testInstance.instance);
     check("lotus.conf with \"Uinput (Super Smooth)\" loads as Uinput", engine.config().mode.value() == fcitx::LotusMode::Uinput);
+    check("pre-merge ModeOrder lists Uinput once", *engine.config().modeOrder == "Uinput,Minecraft,SurroundingText,Preedit,Emoji,Off,Default");
+
+    {
+        fcitx::RawConfig config;
+        config.setValueByPath("ModeOrder", "Preedit,SuperSmooth,Off,Smooth");
+        engine.setConfig(config);
+        check("setConfig ModeOrder merges former uinput modes", *engine.config().modeOrder == "Preedit,Uinput,Off");
+    }
 
     // setConfig is the path the settings GUI and fcitx5-configtool use.
     for (const char* legacy : {"Uinput (Smooth)", "Uinput (Slow)", "Uinput (Super Smooth)"}) {

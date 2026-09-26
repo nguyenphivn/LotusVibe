@@ -76,15 +76,30 @@ namespace fcitx {
             return name == "Uinput (Smooth)" || name == "Uinput (Slow)" || name == "Uinput (Super Smooth)";
         }
 
+        // A pre-merge ModeOrder lists Smooth, Uinput and SuperSmooth, which all become Uinput;
+        // keeping all three would show Uinput three times in the mode menu.
+        void migrateLegacyModeOrder(RawConfig& config) {
+            const auto* order = config.valueByPath("ModeOrder");
+            if (order == nullptr) {
+                return;
+            }
+            std::vector<std::string> migrated;
+            for (auto name : stringutils::split(*order, ",")) {
+                if (name == "Smooth" || name == "SuperSmooth") {
+                    name = "Uinput";
+                }
+                if (std::find(migrated.begin(), migrated.end(), name) == migrated.end()) {
+                    migrated.push_back(std::move(name));
+                }
+            }
+            config.setValueByPath("ModeOrder", stringutils::join(migrated, ","));
+        }
+
         void migrateLegacyMode(RawConfig& config) {
             if (const auto* mode = config.valueByPath("Mode"); mode != nullptr && isLegacyUinputModeName(*mode)) {
                 config.setValueByPath("Mode", "Uinput");
             }
-        }
-
-        // ModeOrder entries written before the merge.
-        std::string canonicalModeKey(const std::string& name) {
-            return (name == "Smooth" || name == "SuperSmooth") ? "Uinput" : name;
+            migrateLegacyModeOrder(config);
         }
     } // namespace
 
@@ -682,9 +697,6 @@ namespace fcitx {
                 {"Default", *config_.showModeDefault}};
 
             std::vector<LotusMode> enabledModes;
-            for (auto& name : order) {
-                name = canonicalModeKey(name);
-            }
             for (const auto& name : order) {
                 bool visible = false;
                 for (const auto& v : visibility) {
@@ -1029,9 +1041,6 @@ namespace fcitx {
 
         std::vector<ModeInfo> allModes;
         auto                  order = stringutils::split(*config_.modeOrder, ",");
-        for (auto& name : order) {
-            name = canonicalModeKey(name);
-        }
         for (const auto& name : order) {
             auto it = modeMap.find(name);
             if (it != modeMap.end()) {
