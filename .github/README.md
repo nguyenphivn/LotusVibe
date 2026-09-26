@@ -16,7 +16,7 @@ Trang này chỉ ghi **những gì khác với bản gốc**. Hướng dẫn dù
   và `Uinput (Slow)` gộp thành một chế độ `Uinput`, chạy như Super Smooth. Cấu hình cũ tự chuyển,
   không phải chỉnh gì. [Xem bên dưới](#nên-dùng-chế-độ-nào).
 - **Vá Messenger (20/09): Messenger trên Facebook hết mất chữ** — bộ gõ bôi đen chữ cần bỏ bằng
-  Shift+Mũi tên trái rồi gõ đè, thay vì xoá trước rồi gõ sau. Đo 861 lần thay chữ, 0 lần mất.
+  Shift+Mũi tên trái rồi gõ đè, thay vì xoá trước rồi gõ sau. Đo 861 lần thay chữ, 0 lần mất. Bật sẵn từ 26/09.
   [Xem bên dưới](#messenger-trên-facebook-bôi-đen-rồi-gõ-đè-thay-vì-xoá-rồi-gõ-2009).
 - **Cài hoặc cập nhật xong phải khởi động lại máy chủ nền:**
   `sudo systemctl restart fcitx5-lotus-server@$(whoami).service`, rồi khởi động lại fcitx5.
@@ -96,7 +96,8 @@ Facebook không còn chỗ chen vào. Quan trọng hơn: Edge **báo lại** "đ
 | 50 câu đầy đủ                | sai 1                       | sai 0                |
 | Chờ mỗi lần bỏ dấu           | 40 ms, từ đầu 60 ms         | 3–20 ms, thường 6 ms |
 
-Bật bằng `MessengerSelectOvertype=True` (cần `WaitSurroundingEvent=True`). Ba điều cần biết:
+Bật sẵn từ 26/09 (`MessengerSelectOvertype` và `WaitSurroundingEvent` mặc định `True`). Muốn tắt thì đặt
+`MessengerSelectOvertype=False` trong `~/.config/fcitx5/conf/lotus.conf`. Ba điều cần biết:
 
 - **Chỉ dùng cho ô soạn tin Messenger.** Đo cho thấy các ô khác có khai chữ chung quanh con trỏ nhưng
   không khai lại khi chỉ bôi đen, nên bật ra toàn máy là mất dấu khắp nơi.
