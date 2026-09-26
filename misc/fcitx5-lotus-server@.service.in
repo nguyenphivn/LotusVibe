@@ -51,6 +51,8 @@ DeviceAllow=char-input r
 # CAP_SYS_NICE and CAP_SYS_PTRACE stay: setpriority() in lotus-server.cpp and
 # the readlink /proc/<pid>/exe check that authenticates clients.
 
+# The pointer ACLs come from udev rules; without them libinput skips the device until replug.
+ExecStartPre=+/usr/bin/udevadm settle --timeout=30
 ExecStartPre=+/usr/bin/setfacl -m u:@LOTUS_UINPUT_PROXY_USER@:rw /dev/uinput
 ExecStart=/usr/bin/fcitx5-lotus-server -u %i
 
