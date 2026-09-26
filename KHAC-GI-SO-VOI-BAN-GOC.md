@@ -266,7 +266,9 @@ Vá bỏ phụ thuộc X11 từng nằm ở đây đã vào bản gốc, nên kh
   cũ tự chuyển khi nạp (tên trong `lotus.conf`, số `1`/`3` trong luật theo app, tên trong
   `ModeOrder`); bài `uinput_mode_migration` đỏ đúng 5 chỗ trên mã cũ. Bỏ tuỳ chọn
   `ShowModeSmooth`, `ShortcutSmooth`, `ShowModeSuperSmooth`, `ShortcutSuperSmooth`; phím tắt mặc
-  định của `Uinput` thành `1`. Không gửi upstream: bản gốc giữ ba chế độ.
+  định của `Uinput` thành `1`. Không gửi upstream: bản gốc giữ ba chế độ. Sửa 26/09: `ModeOrder` cũ
+  đổi ba tên thành ba chữ `Uinput` nên bảng chọn chế độ hiện `Uinput` ba lần; nay bỏ tên trùng
+  ngay lúc nạp, bài `uinput_mode_migration` đỏ đúng 2 chỗ mới trên mã trước đó.
 - **`42d7529` khoảng cách phím xoá mặc định 0 ms thay vì 5.** Đo `khoang_cach_xoa.py macdinh`:
   0,10 ms, 8/8 trên bốn đích. **Đây là lựa chọn riêng của máy này, không phải đề xuất cho
   upstream** — mức đề xuất cho upstream là 2 ms, vì mức 0 bỏ hẳn yêu cầu khe im lặng. Dấu hiệu
