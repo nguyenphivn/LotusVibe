@@ -50,6 +50,8 @@ DeviceAllow=char-input r
 #                     per network namespace, so this loses hot-plug detection.
 # CAP_SYS_NICE stays for setpriority() in lotus-server.cpp.
 
+# The pointer ACLs come from udev rules; without them libinput skips the device until replug.
+ExecStartPre=+/usr/bin/udevadm settle --timeout=30
 ExecStartPre=+/usr/bin/setfacl -m u:@LOTUS_UINPUT_PROXY_USER@:rw /dev/uinput
 ExecStart=/usr/bin/fcitx5-lotus-server -u %i
 

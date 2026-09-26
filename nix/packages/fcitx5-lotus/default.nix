@@ -16,6 +16,7 @@
   pkg-config,
   python3,
   qt6,
+  systemd,
   udev,
 }:
 
@@ -107,6 +108,7 @@ stdenv.mkDerivation (finalAttrs: {
 
     substituteInPlace $out/lib/systemd/system/fcitx5-lotus-server@.service \
       --replace-fail "/usr/bin/setfacl" "${acl}/bin/setfacl" \
+      --replace-fail "/usr/bin/udevadm" "${systemd}/bin/udevadm" \
       --replace-fail "/usr/bin/fcitx5-lotus-server" "$out/bin/fcitx5-lotus-server"
   '';
 
