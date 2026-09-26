@@ -99,13 +99,10 @@ Firefox theo tên chương trình: bản Firefox mang tên khác (LibreWolf, Fir
 **chưa** được nhận. Trình duyệt họ Chromium khác (Chromium, Brave) tự khai ô địa chỉ giống Edge nên
 nhiều khả năng chạy, nhưng **chưa đo**.
 
-Máy gốc còn bật `WaitSurroundingEvent=True` trong `~/.config/fcitx5/conf/lotus.conf` (vá nhóm B,
-mặc định tắt). Vá thanh địa chỉ không phụ thuộc tuỳ chọn này, nhưng mọi lượt đo trên máy gốc đều
-chạy khi nó bật.
-
-Máy Fedora còn đặt `MessengerSelectOvertype=True` (bôi đen rồi gõ đè trong ô soạn tin Messenger), cùng
-`WaitSurroundingSettleMs=40` và `WaitSurroundingSettleFirstWordMs=60` làm đường lùi khi tắt công tắc đó, cùng tệp
-đó, để gõ được Messenger trên Facebook (vá nhóm E, cả hai mặc định 0). Tuỳ chọn này chỉ có tác dụng khi `WaitSurroundingEvent=True`.
+Từ 26/09 các tuỳ chọn cho Messenger bật sẵn, không cần đặt trong `~/.config/fcitx5/conf/lotus.conf`:
+`WaitSurroundingEvent=True` (vá nhóm B), `MessengerSelectOvertype=True` (bôi đen rồi gõ đè, vá nhóm E),
+`WaitSurroundingSettleMs=40` và `WaitSurroundingSettleFirstWordMs=60` (đường lùi khi tắt bôi đen).
+Vá thanh địa chỉ không phụ thuộc các tuỳ chọn này.
 
 **Cập nhật bản mới về sau:** trong thư mục `LotusVibe`, chạy `git pull --recurse-submodules`,
 lặp lại bước 3, rồi `sudo systemctl restart fcitx5-lotus-server@$(whoami).service` và khởi động lại
@@ -589,7 +586,7 @@ dài (`anchor` lệch `cursor` đúng N), rồi `commitString` đè lên vùng c
 **Vá:**
 - Máy chủ uinput nhận **số âm** trên cùng socket = bôi đen |n| chữ: giữ `KEY_RIGHTSHIFT` (Shift phải, xem dưới), bắn `KEY_LEFT`
   n lần, nhả Shift, tất cả trong một lần ghi. Phải đăng ký thêm hai mã phím đó với `UI_SET_KEYBIT`.
-- Addon: `MessengerSelectOvertype` (mặc định tắt), chỉ áp cho ô có hình ô soạn tin Messenger.
+- Addon: `MessengerSelectOvertype` (mặc định bật từ 26/09), chỉ áp cho ô có hình ô soạn tin Messenger.
 - Phím Shift+Left do chính mình bắn quay lại fcitx: phải `forward()` thẳng tới ứng dụng và KHÔNG được
   coi là người dùng di con trỏ.
 - "Van an toàn" cũ (`current_backspace_count_ >= expected_backspaces_` ở phím kế tiếp) phải bỏ qua khi
