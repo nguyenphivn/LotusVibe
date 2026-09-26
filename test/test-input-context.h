@@ -170,7 +170,7 @@ inline void configureTestPaths(const char* name) {
     // The engine spell-checks against lotus/vietnamese.cm.dict from the data dirs. Without a copy here
     // it falls back to the one the host happens to have installed: a clean build box has none, so a
     // valid word like "chư" is restored to "uw" on space and tests pass on a dev machine but fail in
-    // the package %check (24/09: 5/5 red without the file, 5/5 green with it, same build).
+    // the package %check.
     // Copy the source tree's dictionary so every run spell-checks against the code under test.
     std::filesystem::create_directories(root / "data/fcitx5/lotus");
     std::filesystem::copy_file(LOTUS_TEST_DICTIONARY, root / "data/fcitx5/lotus/vietnamese.cm.dict");

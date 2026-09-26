@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Same Messenger two-step update as super-smooth-half-updated-snapshot, but for a replacement that
-// deletes more than one character. Telex "do" + "d" -> "đo" deletes "do"; after the first backspace
-// Edge reports the cursor between 'd' and 'o' while the text still holds both ("do\n\n", cursor 1).
-// Log 19/09: 4/4 commits sent on such a snapshot went out 3-10 ms after the trigger and were lost;
-// the check that only looked at the first deleted character let them through.
+// Same Messenger two-step update as super-smooth-half-updated-snapshot, but deleting more than one
+// character: after the first backspace Edge reports the cursor between 'd' and 'o' while the text
+// still holds both ("do\n\n", cursor 1). That snapshot must not count as done.
 #include "lotus-engine.h"
 #include "lotus-utils.h"
 #include "test-input-context.h"

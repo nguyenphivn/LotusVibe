@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Deleting first and committing after leaves a gap Facebook repaints into, so the Messenger composer
-// selects the old characters with Shift+Left instead and types over the selection: no empty state, no
-// gap, and Edge confirms the selection (rig 20/09: 861 replacements, 0 lost, confirmed in 3-20 ms).
-// The server is told to select by a NEGATIVE count on the same socket.
+// Deleting then committing leaves a gap Facebook repaints into, so the Messenger composer selects the
+// old characters with Shift+Left and types over the selection. The server is told to select by a
+// negative count on the same socket.
 // A field that never confirms the selection must NOT be typed into: the cursor is sitting N characters
 // back, so a commit would scramble the text. Give the cursor back and drop the replacement instead,
 // but still type the keys queued during the wait.
@@ -190,8 +189,7 @@ int main() {
         reportFailure("ask the server to select one character for ư -> ữ", "-1", std::to_string(request));
         return 1;
     }
-    // Keys typed while waiting are queued (the cursor is mid-selection). Rig 23/09: the fallback threw
-    // the queue away, so a space typed in those 150 ms vanished ("đươcđêm").
+    // Keys typed while waiting are queued (the cursor is mid-selection) and must survive the fallback.
     pumpEventLoop(testInstance.instance, 10);
     if (!type(engine, entry, *context, FcitxKey_space, true) || !type(engine, entry, *context, FcitxKey_d, true))
         return 1;
@@ -221,11 +219,8 @@ int main() {
         fcitx::InputContextEvent leave(context.get(), fcitx::EventType::InputContextFocusOut);
         engine.reset(entry, leave);
     }
-    // The Facebook post composer, editing in the middle of pasted text: the rest of the post follows the
-    // cursor, but the field still ends in "\n\n" like every Facebook composer report (log 24/09: 2787
-    // mid-text and 2207 end-of-text reports, all ending "\n\n"). Deleting there lost the replacement
-    // ("đây là bản fork" came out "ây l bn fork"); Edge confirmed the selection in 7 ms at the end of
-    // the same post, so it must select here too.
+    // The Facebook post composer, editing mid-text: the rest of the post follows the cursor, but the
+    // field still ends in "\n\n", so it must select here too.
     const std::string postTail = "\n\nMình đã sửa gần hết\n\n";
     setSnapshot(*context, "Mời anh em " + postTail, 11);
     if (!typeLetters("cu", "Mời anh em ", postTail))

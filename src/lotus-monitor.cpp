@@ -21,10 +21,8 @@
 #include <unistd.h>
 #include <limits.h>
 
-// Server path passed in by CMake (like FCITX5_LOTUS_SETTINGS_PATH). A hard-coded "/usr/bin/..."
-// silently rejects every install outside the default prefix (local builds, /usr/local, Nix,
-// distros with another bindir): the addon reconnects every second forever and "reset the word on
-// mouse click" stops working with no visible sign.
+// Server path from CMake, so installs outside /usr (local builds, Nix, other bindirs) still pass
+// the peer check.
 #ifndef FCITX5_LOTUS_SERVER_PATH
 #define FCITX5_LOTUS_SERVER_PATH "/usr/bin/fcitx5-lotus-server"
 #endif
@@ -60,10 +58,8 @@ static bool authenticateMouseSocketPeer(int sock, std::string& out_exe_path) {
 
     out_exe_path = exe_path;
 
-    // A private addon + server pair (LOTUS_SOCKET_NAMESPACE, used by tests) lives outside any install
-    // prefix, so the CMake path does not match. The variable is read only from the addon's own
-    // environment, i.e. the user's session, and the socket is already per-user, so it opens nothing
-    // to other users' processes.
+    // Tests run a private server outside any install prefix (LOTUS_SOCKET_NAMESPACE). The socket is
+    // per-user, so accepting it opens nothing to other users.
     const char* expected = std::getenv("LOTUS_SERVER_PATH");
     if (expected == nullptr || *expected == '\0') {
         expected = FCITX5_LOTUS_SERVER_PATH;

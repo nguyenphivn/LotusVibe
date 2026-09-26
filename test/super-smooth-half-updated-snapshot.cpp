@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Messenger in Edge (Wayland) answers a uinput backspace with TWO surrounding-text
-// updates: first the cursor moves back while the text still holds the deleted
-// character ("tie\n\n", cursor 2), then the text catches up ("ti\n\n", cursor 2).
-// A commit sent between the two is dropped by the page, and the next replacement's
-// backspaces then eat real characters: "tieengs vieetj" came out as "iếngiệt"
-// (measured 17/09 with WaitSurroundingEvent on: 3/3 commits on a half-updated
-// snapshot lost, 3/3 commits on a consistent one landed).
+// Messenger in Edge (Wayland) answers a uinput backspace with two surrounding-text updates: first the
+// cursor moves back ("tie\n\n", cursor 2), then the text catches up ("ti\n\n", cursor 2). A commit
+// sent between the two is dropped by the page, so the first one must not count as done (#267).
 #include "lotus-engine.h"
 #include "lotus-utils.h"
 #include "test-input-context.h"

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The Messenger composer that has just been emptied is still loading: the first word of a message
-// lost 30 of 156 replacements at a 20 ms settle, 4/100 at 40 and 0/100 at 60 (typing rig 19/09).
-// The first word waits WaitSurroundingSettleFirstWordMs; a later word keeps the ordinary settle.
+// A just-emptied Messenger composer is still loading, so the first word of a message waits
+// WaitSurroundingSettleFirstWordMs; a later word keeps the ordinary settle.
 #include "lotus-engine.h"
 #include "lotus-utils.h"
 #include "test-input-context.h"

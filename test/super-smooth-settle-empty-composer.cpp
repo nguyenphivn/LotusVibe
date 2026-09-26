@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // When the only word in the Messenger composer is replaced, Edge reports the emptied composer as a
-// single "\n" (log 17/09, 'tieengs' -> 'iến' lost its first letter there). That snapshot has no
-// "\n\n" after the cursor, yet it is still the composer that repaints: the settle wait must apply.
+// single "\n". It has no "\n\n" after the cursor, yet it still repaints: the settle wait must apply.
 #include "lotus-engine.h"
 #include "lotus-utils.h"
 #include "test-input-context.h"

@@ -7,14 +7,11 @@
  * @file lotus-gnome-theme.h
  * @brief Detects whether the GNOME Shell top bar is dark.
  *
- * The tray icons of GNOME (AppIndicator extension) sit on the top bar, which
- * the shell stylesheet paints.  The settings portal reports the application
- * colour scheme instead, and the two disagree in common setups: Ubuntu's Yaru
- * paints a near-black bar under the default light scheme, and shell themes
- * such as WhiteSur draw a translucent bar with white text.  Both picked a
- * black icon on a dark bar — the GNOME twin of issue #374.
+ * Tray icons sit on the top bar, which the shell stylesheet paints, while the
+ * settings portal reports the app colour scheme; the two often disagree (Yaru
+ * paints a dark bar under the light scheme). See #374 for the KDE case.
  *
- * The active stylesheet is found the way GNOME Shell does it: the User Themes
+ * The stylesheet is found the way GNOME Shell does it: the User Themes
  * extension first, then the session mode's own stylesheet.
  */
 

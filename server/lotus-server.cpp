@@ -89,11 +89,8 @@ void UinputDevice::send_backspace() {
     write(guard_.get(), ev, sizeof(ev));
 }
 
-// Select charCount characters left of the cursor: press right Shift, tap Left, release Shift, all in
-// one write since it is a single selection rather than separate keystrokes like backspaces.
-// Right Shift, not left: fcitx5 treats a lone left Shift tap as the switch to English by default,
-// and with left Shift the IME occasionally fell back to English in the Messenger composer (probably
-// fcitx5 not seeing the arrows in between). Right Shift is not a switch key.
+// Select charCount characters left of the cursor with Shift+Left, in one write.
+// Right Shift: fcitx5 treats a lone left Shift tap as the switch to English.
 void UinputDevice::send_select(int charCount) {
     if (!guard_.is_valid() || charCount <= 0)
         return;
@@ -310,19 +307,9 @@ int main(int argc, char* argv[]) {
     sigaction(SIGTERM, &sa, nullptr);
     sigaction(SIGINT, &sa, nullptr);
 
-    // Gap between two backspaces. LOTUS_BACKSPACE_GAP_MS overrides it without a rebuild; accepts
-    // 0..50, anything else is ignored.
-    //
-    // Default lowered from 5 to 0. Measured on Konsole, the Edge composer, Firefox and Edge under
-    // XWayland, at 50 ms and 5 ms per key: a 2 ms setting gave 2.18-2.21 ms gaps, 1 ms gave
-    // 1.18-1.21, 0 gave 0.08-0.10, and every target typed 8/8 correctly. Smaller is also steadier
-    // (peaks 4.74 / 1.45 / 0.18 ms at fast typing).
-    //
-    // Trade-off: the loop only sends backspaces when poll times out with nothing happening, so this
-    // value is a required quiet gap on seat0. 0 removes that requirement: backspaces go out whether or
-    // not the user is pressing keys. The benchmark typed ~25 ms per key, so it never hit that case;
-    // the evidence for 0 is real use, not measurement. 2 ms is the measured fallback. Go back to it if
-    // fast typing drops or duplicates characters.
+    // Gap between two backspaces in ms (0..50); LOTUS_BACKSPACE_GAP_MS overrides it.
+    // Backspaces go out when poll() times out, so 0 also sends them while the user is typing.
+    // Use 2 if fast typing drops or duplicates characters.
     int backspace_gap_ms = 0;
     if (const char* g = std::getenv("LOTUS_BACKSPACE_GAP_MS"); g != nullptr && *g != '\0') {
         char*      end = nullptr;
@@ -453,12 +440,8 @@ int main(int argc, char* argv[]) {
         }
 
         // handle libinput events (mouse clicks)
-        //
-        // Not guarded by fds[1].revents: libinput_dispatch() above drains the fd into libinput's own
-        // queue on every iteration, including the ones where poll() returned for another fd or timed
-        // out. By the next poll() that fd is quiet again, so events queued this way would sit in the
-        // queue forever if we only drained it when POLLIN is set - which is exactly what happens
-        // while backspaces are pending, since then poll() uses a timeout and returns without POLLIN.
+        // Drain unconditionally: libinput_dispatch() above may queue events on an iteration where
+        // this fd has no POLLIN (e.g. a poll() timeout while backspaces are pending).
         {
             struct libinput_event* event = nullptr;
 

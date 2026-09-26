@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Messenger on facebook.com repaints its composer a few ms AFTER Edge already reports the
-// deletion as done. A commit that lands before that repaint is wiped. Measured 17/09 on
-// three manual runs: 5/5 commits sent 3-12 ms after the trigger backspace lost, 6/6 sent at
-// 17 or 51 ms landed. WaitSurroundingSettleMs holds the commit that long after the snapshot
-// shows the deletion done.
+// Messenger repaints its composer a few ms after Edge reports the deletion as done, wiping a commit
+// that lands before the repaint. WaitSurroundingSettleMs holds the commit that long.
 #include "lotus-engine.h"
 #include "lotus-utils.h"
 #include "test-input-context.h"
