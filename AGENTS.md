@@ -6,7 +6,7 @@ Rules for anyone (human or coding agent) changing this fork or sending patches u
 
 These rules exist because upstream reviewers said our patches were hard to read: Vietnamese
 identifiers, too many core changes at once, long AI-sounding PR text, and claims they could not
-check (#476, #492). Measured on 2026-09-26:
+check (upstream #476, #492). Measured on 2026-09-26:
 
 |                                                 | Upstream               | This fork          |
 | ----------------------------------------------- | ---------------------- | ------------------ |
@@ -49,7 +49,7 @@ Inside this fork: every change goes through a PR into `ban-dung` (branches are d
 To upstream:
 
 - **Open an issue first**, get the maintainer's agreement on the direction, then send code. PRs sent
-  cold have been closed without comment (#452).
+  cold have been closed without comment (upstream #452).
 - **One concern per PR**, based on current upstream `dev`. A bug fix, a refactor and a rename are
   three PRs. If the description needs headings, the PR is probably too big.
 - **Keep core changes small.** The maintainer reviews alone in spare time; a PR worth sending costs
