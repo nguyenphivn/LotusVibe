@@ -151,9 +151,8 @@ namespace fcitx {
         bool                                             surr_wait_saw_other_snapshot_  = false; ///< an event differed from the send-time snapshot
         bool                                             surr_wait_sent_snapshot_fresh_ = false; ///< send-time snapshot still showed the text to delete
 
-        // A snapshot is "frozen" when a wait times out and every event matched the send-time snapshot
-        // (Edge's address bar). After two in a row, stop waiting and sleep like Slow mode; probe again
-        // every WaitSurroundingProbeEvery replacements.
+        // "Frozen": a wait timed out and every event matched the send-time snapshot. After two in a
+        // row, sleep instead and probe again every WaitSurroundingProbeEvery replacements.
         int  surr_frozen_streak_      = 0;
         bool surr_frozen_             = false;
         int  surr_frozen_probe_count_ = 0;
@@ -171,9 +170,8 @@ namespace fcitx {
         void                             finishReplacement(const char* reason, bool fromTimer);
 
         // --- Select and overtype (Facebook composers) ---
-        // Select the chars to replace with Shift+Left, wait until the snapshot reports a selection of
-        // that length, then commit over it. The field never becomes empty, so Messenger does not reload
-        // its placeholder.
+        // Select with Shift+Left, wait for the snapshot to show the selection, then commit over it.
+        // The field never becomes empty, so Messenger does not reload its placeholder.
         void                                             send_select_uinput(int charCount) const; // sent as a negative count
         void                                             selectAndOvertype(const std::string& addedPart, int charCount);
         void                                             finishOvertype(const char* reason, bool fromTimer);

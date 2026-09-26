@@ -136,11 +136,8 @@ namespace fcitx {
     }
 
     namespace {
-        // Firefox's address bar does not set CapabilityFlag::Url and reports its autofill suffix as
-        // unselected even though it is highlighted on screen (cursor == anchor, 11-25 chars after the
-        // cursor). Recognise it by shape instead: single line, and everything after the cursor is a
-        // URL character. Checking only for "no whitespace" misfired in web editors (Lark) that keep
-        // invisible characters after the cursor.
+        // Firefox's address bar sets no Url flag and reports its autofill suffix as unselected, so
+        // recognise it by shape: one line, and only URL characters after the cursor.
         bool isUrlChar(uint32_t c) {
             if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
                 return true;
@@ -197,10 +194,8 @@ namespace fcitx {
     } // namespace
 
     namespace {
-        // The text before the cursor is exactly the word being typed, i.e. the word starts the field.
-        // An extra backspace there hits the start of the field and deletes nothing, so a wrong
-        // autofill guess is harmless. realtextLen is not usable here: after clearing Firefox's address
-        // bar it still holds the previous input's length, which made isAutofillCertain miss 5 of 6 runs.
+        // The word being typed starts the field, so an extra backspace for a wrong autofill guess
+        // deletes nothing. realtextLen is stale here after the address bar is cleared.
         bool onlyCurrentWordBeforeCursor(const SurroundingText& s, const std::string& buff) {
             if (!s.isValid() || buff.empty() || s.cursor() != utf8::length(buff)) {
                 return false;
@@ -516,10 +511,8 @@ namespace fcitx {
         // content alone: when the app lags by a couple of keys, the stale snapshot looks exactly like
         // the finished state.
         if (!surr_wait_sent_snapshot_.empty() && t + "\x1f" + std::to_string(s.cursor()) == surr_wait_sent_snapshot_) {
-            // At fast typing speeds the send-time snapshot is always one key behind and Firefox sends no
-            // intermediate state, so rejecting it outright turned 37 of 52 timeouts into 200 ms stalls.
-            // Accept it once we have waited as long as Slow mode would (8 ms per backspace), which is no
-            // less safe than Slow. The immediate (0 ms) check still rejects it.
+            // Firefox may never send another state, so accept it after WaitSurroundingMinPerKeyMs per
+            // backspace, as long as a plain sleep. The immediate check still rejects it.
             const auto waited  = (::fcitx::now(CLOCK_MONOTONIC) - surr_wait_started_at_) / 1000;
             const auto minimum = static_cast<uint64_t>(engine_->config().waitSurroundingMinPerKeyMs.value()) * static_cast<uint64_t>(std::max(expected_backspaces_, 1));
             if (waited < minimum) {
@@ -535,13 +528,8 @@ namespace fcitx {
         if (!surr_wait_deleted_.empty() && endsWith(before, surr_wait_prefix_ + surr_wait_deleted_)) {
             return false; // stale snapshot: the text to delete is still there
         }
-        // Messenger on Edge (Wayland) reports each backspace twice: the cursor moves first, the text
-        // is removed a few ms later ('tie\n\n' cursor 2, then 'ti\n\n'). Looking only before the
-        // cursor, the half-updated snapshot seems done; committing then gets dropped by the page and
-        // the next replacement's backspaces eat real text ('tieengs vieetj' -> 'iếngiệt'). When more
-        // than one char is deleted the cursor can also sit inside the deleted part ('do\n\n' cursor 1
-        // while deleting 'do'). If the text before the cursor is prefix + the first k deleted chars and
-        // the char after the cursor is deleted char k, the deletion is still in progress (#267).
+        // Messenger moves the cursor before it removes the text, so a snapshot can look done while
+        // deleted chars still follow the cursor. Treat that as in progress (#267).
         if (!surr_wait_deleted_.empty() && it != t.end()) {
             const std::string charAfter(it, utf8::nextChar(it));
             std::string       passed = surr_wait_prefix_;
@@ -557,18 +545,14 @@ namespace fcitx {
         return endsWith(before, surr_wait_prefix_);
     }
 
-    // The event-driven wait returns to the event loop immediately, so the user can switch windows
-    // while a commit is still pending. deactivate() clears is_deleting_, and a timer firing after
-    // that would silently drop the text (Edge's address bar kept 't' instead of 'tô'). The old
-    // sleeping path had no such gap because it slept inside the key handler. Commit before leaving.
+    // The wait returns to the event loop, so focus can move while a commit is pending. deactivate()
+    // clears is_deleting_ and a later timer would drop the text, so commit now.
     void LotusState::flushPendingReplacement() {
         if (!surr_wait_pending_) {
             return;
         }
-        // A timer-only wait lasts a few ms and stands in for the old sleep that gives the app time to
-        // apply the backspaces; committing early would land before them. Losing focus here is almost
-        // always Chromium X11 briefly resetting focus, so let the timer commit (it drops the text if
-        // the field does not come back).
+        // Committing before a timer-only wait ends would land before the backspaces. The focus loss is
+        // usually Chromium X11 bouncing focus, so let the timer commit.
         if (surr_wait_timer_only_) {
             return;
         }
@@ -576,9 +560,8 @@ namespace fcitx {
     }
 
     namespace {
-        // The Messenger composer (Edge) reports "\n\n" right after the cursor; once emptied the whole
-        // snapshot is "\n". The page repaints and overwrites fresh text only in this field, so only
-        // this field waits to settle; other fields commit immediately.
+        // The Messenger composer has "\n\n" right after the cursor, or is just "\n" when empty. Only
+        // this field repaints over fresh text, so only it waits to settle.
         bool looksLikeMessengerComposer(const SurroundingText& s) {
             if (!s.isValid()) {
                 return false;
@@ -594,10 +577,8 @@ namespace fcitx {
             return std::string(it, t.end()) == "\n\n";
         }
 
-        // Every Facebook composer (Messenger message, post box) reports a whole-field text ending in
-        // "\n\n", wherever the cursor is (post box log: 2787 mid-text and 2207 end-of-text snapshots,
-        // no exception). When editing mid-text the rest of the post follows the cursor, so the
-        // "\n\n right after the cursor" test misses it. An emptied field is just "\n".
+        // Facebook composers (message and post box) report text ending in "\n\n" wherever the cursor
+        // is, or just "\n" when empty. Check the whole field so mid-text edits match too.
         bool looksLikeFacebookComposer(const SurroundingText& s) {
             if (!s.isValid()) {
                 return false;
@@ -624,8 +605,7 @@ namespace fcitx {
             finishReplacement(reason, fromTimer);
             return;
         }
-        // A just-emptied composer is still reloading its placeholder. Measured on the first word:
-        // 30/156 lost at 20 ms, 4/100 at 40 ms, 0/100 at 60 ms. Later words keep the normal wait.
+        // A just-emptied composer is still reloading its placeholder, so the first word waits longer.
         if (isFirstWordOfMessage(snapshot)) {
             settleMs = std::max(settleMs, engine_->config().waitSurroundingSettleFirstWordMs.value());
         }
@@ -696,9 +676,8 @@ namespace fcitx {
             if (current_backspace_count_ < expected_backspaces_) {
                 return false; // Allow intermediate backspaces to reach the app to clear autofill/old text.
             }
-            // Some apps declare surrounding text but always send an empty snapshot (Konsole: valid,
-            // length 0). Nothing can ever match, so waiting would cost the full timeout per key; use the
-            // sleeping path below instead.
+            // Some apps (Konsole) declare surrounding text but always send it empty; nothing can match,
+            // so use the sleeping path.
             const bool emptySnapshot = ic_->surroundingText().text().empty();
             if (engine_->config().waitSurroundingEvent.value() && emptySnapshot) {
                 LOTUS_INFO("Surr wait skip: empty snapshot");
@@ -712,12 +691,9 @@ namespace fcitx {
                 }
             }
             if (engine_->config().waitSurroundingEvent.value() && !emptySnapshot && !skipFrozenWait) {
-                // fcitx5 has a single event loop, so sleeping and retrying below can never see a
-                // surrounding-text update that arrives during the sleep. Return to the loop instead and
-                // watch InputContextSurroundingTextUpdated from this moment on; a watcher that outlived
-                // the previous replacement caught that replacement's late events and committed too early.
-                // Decide by content (deletionLooksDone), not realtextLen. On timeout commit as before.
-                // Keys typed meanwhile still go to buffered_keys_.
+                // Sleeping blocks the single event loop, so no update could arrive. Return to the loop
+                // and watch for updates from now on; a fresh watcher ignores the previous replacement's
+                // late events. Keys typed meanwhile go to buffered_keys_.
                 event.filterAndAccept();
                 surr_wait_started_at_ = ::fcitx::now(CLOCK_MONOTONIC);
                 // After a timeout the app is lagging (Firefox) and its snapshot is stale: skip the
@@ -737,9 +713,8 @@ namespace fcitx {
                     if (!surr_wait_pending_ || surr_wait_timer_only_ || ice.inputContext() != ic_ || !is_deleting_.load()) {
                         return;
                     }
-                    // Right after a timeout the app is lagging, and an early event is its stale buffer
-                    // catching up, not the finished deletion ('trươnờ'). Ignore events that arrive before
-                    // the Slow-mode threshold (8 ms per backspace) in that state.
+                    // After a timeout, an early event is the app's stale buffer catching up, not the
+                    // finished deletion. Ignore events before WaitSurroundingMinPerKeyMs per backspace.
                     const auto waitedUs = ::fcitx::now(CLOCK_MONOTONIC) - surr_wait_started_at_;
                     const auto minimumUs =
                         static_cast<uint64_t>(engine_->config().waitSurroundingMinPerKeyMs.value()) * static_cast<uint64_t>(std::max(expected_backspaces_, 1)) * 1000ULL;
@@ -758,16 +733,12 @@ namespace fcitx {
                     // Not done yet: keep waiting silently. Anything worth printing here is text the user
                     // just typed, which must not go into the log.
                 });
-                // Two timeouts in a row without a matching event mean this app does not update its
-                // snapshot while deleting (Edge's address bar only updates on printable keys). Use the
-                // short timeout, still above the race window (Slow mode's 8 ms per key); a matching
-                // event restores the long one.
+                // Two timeouts in a row: this app does not update while deleting. Use the short timeout
+                // until an event matches again.
                 const int  timeoutMs = surr_timeout_streak_ >= 2 ? engine_->config().waitSurroundingShortMs.value() : engine_->config().waitSurroundingTimeoutMs.value();
                 const auto timeout   = static_cast<uint64_t>(timeoutMs) * 1000ULL;
-                // Timer accuracy 0 in sd-event means the default 250 ms slack (a 40 ms timer fired at 64,
-                // a 200 ms one at 243), so pass 1 ms. The first deadline sits at the Slow-mode threshold:
-                // many apps send their "done" snapshot before it and then go quiet, so re-check the latest
-                // snapshot there and commit ("threshold"); otherwise move the timer to the full timeout.
+                // Accuracy 0 means sd-event's default 250 ms slack, so pass 1 ms. Check once at the
+                // threshold first: many apps report "done" before it and then go quiet.
                 const auto threshold =
                     static_cast<uint64_t>(engine_->config().waitSurroundingMinPerKeyMs.value()) * static_cast<uint64_t>(std::max(expected_backspaces_, 1)) * 1000ULL;
                 const auto firstDeadline = threshold < timeout ? surr_wait_started_at_ + threshold : surr_wait_started_at_ + timeout;
@@ -790,8 +761,8 @@ namespace fcitx {
                 });
                 return true;
             }
-            // Frozen snapshot: fall back to sleeping with Slow mode's constant, 8 ms x (N - 1). Do not
-            // add it on top of the normal sleep (8 x N extra cost 24 ms for N=1 and 34 ms for N=2).
+            // Frozen snapshot: sleep at least WaitSurroundingMinPerKeyMs x (N - 1) instead of, not on
+            // top of, the normal sleep.
             const int perKeyMs = skipFrozenWait ? std::max(sleepTime, engine_->config().waitSurroundingMinPerKeyMs.value()) : sleepTime;
             int       waitMs   = perKeyMs * (expected_backspaces_ - 1);
             // Validate surr cursor pos should match realtextLen after all BS applied
@@ -801,15 +772,11 @@ namespace fcitx {
             } else if (surr.isValid() && surr.cursor() == realtextLen.load(std::memory_order_acquire)) {
                 LOTUS_INFO("Skip retry");
             } else if (!ic_->capabilityFlags().test(CapabilityFlag::SurroundingText)) {
-                // The app does not declare surrounding text at all (gnome-terminal, Chromium on X11), so
-                // no snapshot will ever arrive and retrying is useless. Apps that declare it but report an
-                // invalid snapshot the first time fall through to the retry below.
+                // No surrounding text capability (gnome-terminal, Chromium on X11): retrying cannot help.
                 LOTUS_INFO("Skip retry (no surrounding capability)");
             } else {
-                // Retry x3 (2 ms each) for apps that declare surrounding text but are not valid yet
-                // (Chromium, Electron...). This waits on a timer, not sleep_for, so the event loop keeps
-                // running and a fresh snapshot can actually arrive; with sleep_for all three retries read
-                // the same stale snapshot.
+                // Retry x3 (2 ms each) for apps whose snapshot is not valid yet. Use a timer, not
+                // sleep_for, so the event loop can deliver a fresh snapshot.
                 waitMs += 3 * 2;
             }
             event.filterAndAccept(); // Filter out the final trigger backspace.
@@ -817,9 +784,8 @@ namespace fcitx {
                 finishReplacement("immediate", false);
                 return true;
             }
-            // sleep_for here would block the whole fcitx5 event loop (X11: 48 of 710 keys blocked
-            // >= 5 ms, worst 12.4 ms). Wait the same amount on a timer and return to the loop now. Keys
-            // arriving meanwhile still go to buffered_keys_ because is_deleting_ is set.
+            // Wait on a timer rather than sleep_for, which would block the fcitx5 event loop. Keys
+            // arriving meanwhile go to buffered_keys_ because is_deleting_ is set.
             surr_wait_pending_       = true;
             surr_wait_timer_only_    = true;
             surr_wait_focus_retries_ = 0;
@@ -900,9 +866,8 @@ namespace fcitx {
             }
             return false;
         });
-        // fcitx's forwardKey cannot carry Shift: on Edge/KWin the cursor moved but the anchor followed
-        // it (no selection), even with Shift_L held around the arrows. A real keyboard produces a
-        // proper selection, so send it at device level through the uinput server.
+        // forwardKey does not carry Shift into the selection, so send the keys through the uinput
+        // server like a real keyboard.
         send_select_uinput(charCount);
         LOTUS_INFO("Select " + std::to_string(charCount) + " chars");
     }
@@ -931,9 +896,7 @@ namespace fcitx {
         ResetEngine(lotusEngine_.handle());
         oldPreBuffer_.clear();
         is_deleting_.store(false);
-        // Keys typed during the wait are real user input: replay them rather than dropping them
-        // (dropping lost a space, "đươcđêm"). The cursor is back in place, so replaying here is the
-        // same as typing them right after.
+        // Keys typed during the wait are user input; the cursor is back, so replay them.
         replayBufferedKeys();
     }
 
@@ -967,9 +930,8 @@ namespace fcitx {
         }
         surr_wait_prefix_ = (oldPreBuffer_.size() >= deletedPart.size()) ? oldPreBuffer_.substr(0, oldPreBuffer_.size() - deletedPart.size()) : std::string();
         {
-            // The send-time snapshot is fresh when the text before the cursor ends with prefix + deleted.
-            // A lagging Firefox sends a stale one (the text about to be deleted is missing), which must not
-            // count towards "frozen" (random timing triggered it 3 times on Firefox).
+            // Only a fresh send-time snapshot (text before the cursor ends with prefix + deleted) may
+            // count towards "frozen"; a lagging app sends a stale one.
             surr_wait_sent_snapshot_fresh_ = false;
             const auto& snapshot           = ic_->surroundingText();
             if (snapshot.isValid()) {
@@ -985,31 +947,22 @@ namespace fcitx {
         }
         const auto&       surrounding = ic_->surroundingText();
         const std::string surrText    = surrounding.text();
-        // Facebook composers only. Other fields declare surrounding text but do not report a
-        // selection-only change (150 ms without a single event), so enabling this everywhere would
-        // drop tone marks system-wide. The post box reports the selection like the message box does
-        // (confirmed after 7 ms); deleting then committing mid-text there loses characters ("đây là
-        // bản fork" became "ây l bn fork"), so match on the tail of the whole field, not the text after
-        // the cursor.
+        // Facebook composers only: other fields do not report a selection-only change, so the
+        // overtype would time out and drop the tone mark.
         if (engine_->config().messengerSelectOvertype.value() && realMode != LotusMode::Minecraft && looksLikeFacebookComposer(surrounding)) {
             selectAndOvertype(addedPart, static_cast<int>(utf8::length(deletedPart)));
             return;
         }
-        // LibreOffice binds Backspace to a shortcut (.uno:SwBackspace) and runs every shortcut
-        // asynchronously (AsyncAccelExec::execAsync), while committed text is inserted at once, so the
-        // text overtakes queued backspaces ('chao'+f -> 'chaà'; Writer: 30-36 of 60 words wrong; longer
-        // waits, sync mode and forwardKey did not help). deleteSurroundingText is applied immediately,
-        // relative to the cursor, so the end-of-text check other apps need is not required. Measured
-        // 0/60 wrong at 70, 150 and 350 ms per key.
+        // LibreOffice runs Backspace as an async shortcut, so committed text overtakes it. Its
+        // deleteSurroundingText applies at once, relative to the cursor, so use it there (#162).
         const bool isLibreOffice = ic_->program() == "soffice" && realMode != LotusMode::Minecraft;
         bool       isSurrText    = isLibreOffice ? ic_->capabilityFlags().test(CapabilityFlag::SurroundingText) :
                                                    engine_->config().useSurroundingTextIfPossible.value() && ic_->capabilityFlags().test(CapabilityFlag::SurroundingText) &&
                 surrounding.isValid() && !surrText.empty() && surrounding.cursor() == utf8::length(surrText);
         if (!isSurrText && realMode != LotusMode::Minecraft) {
             ++expected_backspaces_;
-            // Uinput mode skips the autofill guard everywhere for speed, but browser address bars
-            // still need it (doubled first letter, #190). Chromium sets the Url flag; Firefox does not,
-            // so recognise its autofill tail by shape. Every other field skips it.
+            // Uinput skips the autofill guard except in address bars (#190): the Url flag on Chromium,
+            // the autofill shape on Firefox.
             const bool isFirefoxAddressBar = ic_->program() == "firefox" && textAfterCursorLooksLikeUrl(surrounding);
             const bool checkAutofill       = realMode != LotusMode::Uinput || ic_->capabilityFlags().test(CapabilityFlag::Url) || isFirefoxAddressBar;
             if (checkAutofill) {
@@ -1017,7 +970,6 @@ namespace fcitx {
                 // This fixes the "toôi" duplication bug in Chromium-based search bars.
                 // The isAutofillCertain function has been optimized to differentiate
                 // between browser autofill and AI ghost text.
-                // Firefox shows its autofill suggestion right after the first character of the field.
                 // isAutofillCertain runs first so its realtextLen update still happens.
                 if (isAutofillCertain(surrounding) || (isFirefoxAddressBar && onlyCurrentWordBeforeCursor(surrounding, oldPreBuffer_))) {
                     ++expected_backspaces_;
@@ -1602,10 +1554,8 @@ namespace fcitx {
         }
 
         if (is_deleting_.load(std::memory_order_acquire) && surr_wait_timer_only_) {
-            // A key arrived during a timer-only wait (very fast typing). Buffering it and replaying via
-            // commitString loses text on Chromium X11 (Edge address bar, 5 ms per key: 15 of 30 wrong).
-            // Finish the remaining wait, commit, then handle this key normally: same order as the old
-            // sleep_for, but the loop only blocks when a key actually interrupts, and for less time.
+            // A key arrived during a timer-only wait. Replaying it via commitString loses text on
+            // Chromium X11, so finish the wait, commit, then handle the key normally.
             const uint64_t nowUs = ::fcitx::now(CLOCK_MONOTONIC);
             if (surr_wait_deliver_at_ > nowUs) {
                 std::this_thread::sleep_for(std::chrono::microseconds(surr_wait_deliver_at_ - nowUs));
