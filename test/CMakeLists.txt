@@ -105,6 +105,14 @@ set_tests_properties(server_device_filter PROPERTIES
     TIMEOUT 20
 )
 
+add_executable(server_client_slot server-client-slot.cpp)
+target_include_directories(server_client_slot PRIVATE ${PROJECT_SOURCE_DIR}/server)
+add_test(NAME server_client_slot COMMAND server_client_slot)
+set_tests_properties(server_client_slot PROPERTIES
+    LABELS "unit;server"
+    TIMEOUT 20
+)
+
 add_executable(server_peer_trust
     server-peer-trust.cpp
     ${PROJECT_SOURCE_DIR}/src/lotus-utils.cpp
