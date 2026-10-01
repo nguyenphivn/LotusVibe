@@ -1,65 +1,60 @@
-# Changelog
+# Nhật ký thay đổi
 
-All notable changes to LotusVibe, the fork of
-[fcitx5-lotus](https://github.com/LotusInputMethod/fcitx5-lotus), are recorded here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries describe what changed for the user;
-the reasoning and measurements behind each patch live in
-[KHAC-GI-SO-VOI-BAN-GOC.md](KHAC-GI-SO-VOI-BAN-GOC.md).
+Mọi thay đổi đáng kể của LotusVibe, bản fork của
+[fcitx5-lotus](https://github.com/LotusInputMethod/fcitx5-lotus), được ghi ở đây. Cách ghi theo
+[Keep a Changelog](https://keepachangelog.com/vi/1.1.0/). Mỗi dòng nói người dùng thấy gì thay đổi;
+lý do và số đo của từng miếng vá nằm trong [KHAC-GI-SO-VOI-BAN-GOC.md](KHAC-GI-SO-VOI-BAN-GOC.md).
 
-The fork has no release numbers of its own yet. `CMakeLists.txt` still carries the upstream version it
-was based on.
+Fork chưa có số phiên bản riêng. `CMakeLists.txt` vẫn giữ số phiên bản của bản gốc lúc tách ra.
 
-## [Unreleased]
+## [Chưa phát hành]
 
-## Fork baseline — 2026-09-26
+## Mốc khởi đầu của fork — 26/09/2026
 
-`ban-dung` at `b121f3c`, based on upstream `dev` at `79d5706` (2026-09-15) plus the upstream commits
-picked on 2026-09-24. Everything below is what the fork does differently from that upstream base.
+`ban-dung` ở commit `b121f3c`, dựa trên nhánh `dev` của bản gốc tại `79d5706` (15/09/2026), cộng
+các commit lấy thêm từ bản gốc ngày 24/09/2026. Mọi mục dưới đây là chỗ fork khác bản gốc đó.
 
-### Changed
+### Thay đổi
 
-- The three uinput modes (Slow, Smooth, Super Smooth) are merged into a single **Uinput** mode.
-  Saved configs, per-app rules (modes 1–3) and the mode order are migrated to it, and the mode menu
-  lists it once (#6).
-- After sending backspaces in Uinput mode, the addon waits for the app's surrounding-text update,
-  with a timer, instead of sleeping a fixed time (`WaitSurroundingEvent`, on by default).
-- Apps that declare no surrounding text (terminals, Chromium) skip the retry wait.
-- The server sends backspaces back to back by default; `LOTUS_BACKSPACE_GAP_MS` (0–50) adds a gap.
-- The Messenger and Facebook composer fixes are on by default (#5).
-- Identifiers, comments and log strings in fork-only code are English and follow
-  [AGENTS.md](AGENTS.md) (#4).
+- Gộp ba chế độ uinput (Slow, Smooth, Super Smooth) thành một chế độ **Uinput**. Cấu hình cũ, luật
+  theo app (chế độ 1–3) và thứ tự chế độ tự chuyển sang; menu chế độ chỉ hiện nó một lần (#6).
+- Ở chế độ Uinput, sau khi gửi backspace, bộ gõ chờ app báo surrounding text đã đổi (bằng timer)
+  thay vì ngủ một khoảng cố định (`WaitSurroundingEvent`, bật sẵn).
+- App không báo surrounding text (terminal, Chromium) bỏ qua bước chờ thử lại.
+- Server gửi backspace liền nhau; `LOTUS_BACKSPACE_GAP_MS` (0–50) để chèn khoảng nghỉ.
+- Các bản sửa cho Messenger và ô soạn bài Facebook bật sẵn (#5).
+- Tên biến, comment và log trong mã riêng của fork viết tiếng Anh, theo [AGENTS.md](AGENTS.md) (#4).
 
-### Added
+### Thêm
 
-- Messenger and Facebook composers: the selected text is typed over with right Shift+Left instead of
-  being deleted first, so the composer never empties (`MessengerSelectOvertype`). This applies to the
-  post composer too. Keys typed during a timed-out selection are typed back.
-- Messenger composer: no commit on a half-updated surrounding-text snapshot, and a short settle wait
-  after the deletion shows done (`WaitSurroundingSettleMs` 40 ms, 60 ms for the first word).
-- LibreOffice: Uinput mode deletes through surrounding text instead of backspace keys.
-- Tray icon follows the GNOME Shell top bar colour. The icon path resolver, which upstream removed,
-  is restored for the KDE Plasma panel.
-- Hardened systemd unit for the server.
-- The server honours `LOTUS_SOCKET_NAMESPACE` like the addon, and `LOTUS_SERVER_PATH` names the server
-  the monitor expects (taken from CMake instead of a hardcoded `/usr/bin`).
-- Tests: property tests over random key sequences, held-key repeat in Smooth
-  (LotusInputMethod/fcitx5-lotus#472), the KDE panel icon (LotusInputMethod/fcitx5-lotus#374), and a
-  spell-check test that uses the dictionary in the source tree.
+- Messenger và ô soạn bài Facebook: bôi đen chữ cũ bằng Shift phải + mũi tên trái rồi gõ đè, thay
+  vì xoá trước, nên ô không bao giờ bị trống (`MessengerSelectOvertype`). Phím gõ trong lúc bôi đen
+  bị quá giờ được gõ lại.
+- Messenger: không commit khi surrounding text mới cập nhật một nửa, và chờ thêm một chút sau khi đã
+  xoá xong (`WaitSurroundingSettleMs` 40 ms, chữ đầu tiên của tin nhắn 60 ms).
+- LibreOffice: chế độ Uinput xoá qua surrounding text thay vì gửi phím backspace.
+- Icon khay đổi màu theo thanh trên cùng của GNOME Shell. Khôi phục cách tìm đường dẫn icon (bản gốc
+  đã bỏ) cho panel của KDE Plasma.
+- Unit systemd của server được siết quyền.
+- Server nhận `LOTUS_SOCKET_NAMESPACE` như addon; `LOTUS_SERVER_PATH` chỉ định server mà monitor chờ
+  (lấy từ CMake thay vì ghi cứng `/usr/bin`).
+- Test: kiểm bất biến trên chuỗi phím ngẫu nhiên, giữ phím ở Smooth
+  (LotusInputMethod/fcitx5-lotus#472), icon trên panel KDE (LotusInputMethod/fcitx5-lotus#374), và
+  kiểm chính tả bằng từ điển trong mã nguồn thay vì từ điển cài trên máy.
 
-### Removed
+### Bỏ
 
-- `FixUinputWithAck` and the Chromium suggestion workaround.
+- `FixUinputWithAck` và cách lách gợi ý của Chromium.
 
-### Fixed
+### Sửa lỗi
 
-- The server drains the libinput queue on every loop iteration, so pending events are not left
-  waiting (LotusInputMethod/fcitx5-lotus#507).
-- The anti-duplication guard for autofill suggestions applies only in browser address bars.
+- Server xử lý hết hàng sự kiện libinput ở mỗi vòng lặp, không để sự kiện nằm chờ
+  (LotusInputMethod/fcitx5-lotus#507).
+- Lá chắn chống lặp chữ do gợi ý tự điền chỉ bật ở thanh địa chỉ trình duyệt.
 
-### Documentation
+### Tài liệu
 
-- [KHAC-GI-SO-VOI-BAN-GOC.md](KHAC-GI-SO-VOI-BAN-GOC.md): every patch, why it exists, and its
-  upstream status.
-- [AGENTS.md](AGENTS.md): rules for changing this fork and sending patches upstream (#3).
-- README: install steps for another machine, the single Uinput mode, restarting the server after an
-  update.
+- [KHAC-GI-SO-VOI-BAN-GOC.md](KHAC-GI-SO-VOI-BAN-GOC.md): từng miếng vá, vì sao có, đã gửi lên bản
+  gốc chưa.
+- [AGENTS.md](AGENTS.md): quy định khi sửa fork và khi gửi vá lên bản gốc (#3).
+- README: cài sang máy khác, chế độ Uinput duy nhất, khởi động lại server sau khi cập nhật.
