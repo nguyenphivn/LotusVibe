@@ -45,6 +45,9 @@ right Shift`.
 ## Pull requests
 
 Inside this fork: every change goes through a PR into `ban-dung` (branches are deleted on merge).
+Each such PR adds a line under `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md): what changed
+for the user, with the PR number. Refer to upstream issues as `LotusInputMethod/fcitx5-lotus#123`,
+since a bare `#123` links to this fork.
 
 To upstream:
 
