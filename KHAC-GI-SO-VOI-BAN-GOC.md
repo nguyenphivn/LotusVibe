@@ -34,7 +34,8 @@ còn giá trị của chúng đều nằm trong `ban-dung`.
 ## Cài sang máy khác
 
 Các bước dưới đây cho Arch và CachyOS. Distro khác thì gói cần cài lấy ở mục "Yêu cầu hệ thống"
-trong `README.md`, các bước còn lại giống hệt.
+trong [README của bản gốc](https://github.com/LotusInputMethod/fcitx5-lotus#readme), các bước còn
+lại giống hệt.
 
 **1. Gỡ bản Lotus đóng gói sẵn, nếu máy đã có.** Không gỡ thì tệp của hai bản đè lên nhau, và lần
 cập nhật hệ thống sau sẽ báo lỗi tệp xung đột.
@@ -133,7 +134,7 @@ file đỏ 5/5, có file xanh 5/5. Đây không phải lỗi giờ giấc, nới
 
 ## Hiệu năng so với bản gốc (chế độ uinput)
 
-Bảng này cũng có ở trang đầu `.github/README.md`; sửa số thì sửa cả hai. Mã trong ngoặc là mục
+Bảng này cũng có ở trang đầu `README.md`; sửa số thì sửa cả hai. Mã trong ngoặc là mục
 trong `RADAR.md` của repo workbench, nơi ghi cách đo.
 
 | Đo cái gì | Bản gốc → bản này | Điều kiện |
@@ -738,9 +739,9 @@ Tác giả đẩy mã rất nhanh, khoảng 163 commit mỗi 30 ngày. Khi cần
 chồng làm bản mình tụt lại sau upstream mà không ai để ý, đúng như nhánh `tong-hop` cũ: nó hơn
 `dev` 27 commit nhưng lại THIẾU 1 commit của tác giả.
 
-**Trang đầu của fork là `.github/README.md`**, không phải `README.md`. GitHub ưu tiên hiện tệp trong
-`.github`, nhờ vậy `README.md` của tác giả giữ nguyên và không gây xung đột mỗi lần gom lại. Trang
-đầu chỉ tóm tắt mỗi vá một dòng. **Thêm hoặc bỏ vá thì sửa cả tệp này lẫn trang đầu, trong cùng
+**Trang đầu là `README.md`.** Tới 03/10/2026 trang đầu nằm ở `.github/README.md` để `README.md` của
+tác giả giữ nguyên, khỏi xung đột mỗi lần gom lại; nay không gom lại nữa nên chỉ còn một tệp, và
+README của bản gốc xem ở kho fcitx5-lotus. Trang đầu chỉ tóm tắt mỗi vá một dòng. **Thêm hoặc bỏ vá thì sửa cả tệp này lẫn trang đầu, trong cùng
 commit.**
 
 Sau khi gom xong, phép kiểm bắt buộc là **so mã băm cây mã** với nhánh trước đó. Giống nhau thì
