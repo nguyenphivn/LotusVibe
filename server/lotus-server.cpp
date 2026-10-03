@@ -7,7 +7,6 @@
  */
 
 #include "lotus-server.h"
-#include "lotus-client-slot.h"
 #include "lotus-device-filter.h"
 #include "lotus-key-request.h"
 #include "lotus-logger.h"
@@ -342,7 +341,7 @@ int main(int argc, char* argv[]) {
     fds.push_back({-1, POLLIN, 0}); // Keyboard socket client
 
     FdGuard          addon_fd;
-    ClientSlot       kb_client;
+    FdGuard          kb_client_fd;
     int              pending_backspaces = 0;
 
     struct sigaction sa{};
@@ -387,13 +386,27 @@ int main(int argc, char* argv[]) {
 
         libinput_dispatch(li_ctx.get_li());
 
-        // handle requests from the keyboard client
+        // handle socket (backspace)
+        if ((fds[0].revents & POLLIN) != 0) {
+            int client_fd = accept4(server_fd.get(), nullptr, nullptr, SOCK_NONBLOCK);
+            if (client_fd >= 0) {
+                if (is_trusted_client(client_fd, expected_uid, "keyboard")) {
+                    LotusLogger::instance().info("Fcitx5 connected to keyboard socket");
+                    kb_client_fd.reset(client_fd);
+                    fds[KB_CLIENT_INDEX].fd = kb_client_fd.get();
+                } else {
+                    close(client_fd);
+                }
+            }
+        }
+
+        // handle connect from addon
         if (fds[KB_CLIENT_INDEX].fd >= 0 && (fds[KB_CLIENT_INDEX].revents & (POLLIN | POLLHUP | POLLERR)) != 0) {
             int     count = 0;
             ssize_t n     = recv(fds[KB_CLIENT_INDEX].fd, &count, sizeof(count), 0);
             if (n <= 0) {
                 LotusLogger::instance().warn("Keyboard client disconnected or connection error");
-                kb_client.drop();
+                kb_client_fd.reset(-1);
                 fds[KB_CLIENT_INDEX].fd = -1;
             } else {
                 const KeyRequest request = parseKeyRequest(n, count);
@@ -404,21 +417,6 @@ int main(int argc, char* argv[]) {
                     uinput.send_backspace();
                 } else {
                     LotusLogger::instance().warn("Ignoring invalid key request: " + std::to_string(count) + " (" + std::to_string(n) + " bytes)");
-                }
-            }
-        }
-
-        // accept a keyboard client, after a departed one has been dropped above
-        if ((fds[0].revents & POLLIN) != 0) {
-            int client_fd = accept4(server_fd.get(), nullptr, nullptr, SOCK_NONBLOCK);
-            if (client_fd >= 0) {
-                if (!is_trusted_client(client_fd, expected_uid, "keyboard")) {
-                    close(client_fd);
-                } else if (kb_client.accept(client_fd)) {
-                    LotusLogger::instance().info("Fcitx5 connected to keyboard socket");
-                    fds[KB_CLIENT_INDEX].fd = kb_client.fd();
-                } else {
-                    LotusLogger::instance().warn("Refusing a second keyboard client while one is connected");
                 }
             }
         }
