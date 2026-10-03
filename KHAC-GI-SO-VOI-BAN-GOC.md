@@ -1,10 +1,10 @@
 # Ngó Sen khác gì so với Lotus gốc
 
 Ngó Sen (tên cũ LotusVibe) tách ra từ
-[fcitx5-lotus](https://github.com/LotusInputMethod/fcitx5-lotus), dùng hằng ngày trên hai máy:
-CachyOS + KDE Plasma Wayland, và một iMac chạy Ubuntu 24.04 + GNOME X11 (máy tính tiền kiêm máy chạy
-CI). Tệp này ghi lại **từng miếng vá**: vá gì, vì sao, đã gửi ngược lên chưa, và tác giả trả lời ra
-sao.
+[fcitx5-lotus](https://github.com/LotusInputMethod/fcitx5-lotus), dùng hằng ngày trên Fedora 44 + KDE
+Plasma Wayland và CachyOS + KDE Plasma Wayland. Trên một iMac chạy Ubuntu 24.04 + GNOME X11 (máy tính
+tiền kiêm máy chạy CI) thì mới dùng sơ, chưa thử kỹ. Tệp này ghi lại **từng miếng vá**: vá gì, vì
+sao, đã gửi ngược lên chưa, và tác giả trả lời ra sao.
 
 ## Lấy bản nào
 
