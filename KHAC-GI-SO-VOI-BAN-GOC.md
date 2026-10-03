@@ -85,6 +85,13 @@ Lệnh `restart` là bắt buộc nếu máy từng chạy Lotus: `enable --now`
 nên máy chủ bản gốc cũ vẫn ở lại. Máy chủ đó không hiểu lệnh bôi đen của vá Messenger, xoá nhầm chữ
 rồi đếm sai số phím xoá ở mọi ứng dụng. Mỗi lần cập nhật bản fork cũng chạy lại lệnh `restart` này.
 
+Máy từng cài Lotus (bản gốc hoặc fork trước 26/09) còn để `uinput_proxy` trong nhóm `input`, nhóm đọc
+được mọi bàn phím; `systemd-sysusers` chỉ thêm chứ không gỡ. Gỡ một lần, trước lệnh `restart`:
+
+```
+sudo gpasswd -d uinput_proxy input
+```
+
 **5. Thêm bộ gõ.** Khởi động lại fcitx5 (hoặc đăng xuất rồi vào lại), mở "Fcitx5 Configuration" và
 thêm Ngó Sen. Trên KDE Wayland: System Settings → Virtual Keyboard → chọn "Fcitx 5".
 
@@ -119,12 +126,12 @@ bài:
 ```
 cmake -B build-test -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 cmake --build build-test -j8
-unshare -Urn ctest --test-dir build-test        # phải ra 21/21 (đếm 24/09)
+unshare -Urn ctest --test-dir build-test        # phải ra 26/26 (đếm 26/09)
 ```
 
-Bản gốc `dev` chạy 9 bài. Bản này 21: thêm hai bài kiểm ở nhóm D, bài kiểm của vá icon KDE ở
-nhóm E (mã vá đã vào bản gốc, bài kiểm thì chưa), bài kiểm của vá icon GNOME, và các bài kiểm của vá
-Messenger ở nhóm E.
+Bản gốc `dev` chạy 9 bài. Bản này 26: thêm hai bài kiểm ở nhóm D, bài kiểm của vá icon KDE ở
+nhóm E (mã vá đã vào bản gốc, bài kiểm thì chưa), bài kiểm của vá icon GNOME, các bài kiểm của vá
+Messenger ở nhóm E, và ba bài kiểm máy chủ bàn phím ảo ở nhóm C.
 
 Mỗi bài tự chép từ điển chính tả trong mã nguồn (`data/dictionaries/vietnamese.cm.dict`) vào thư mục
 tạm riêng của nó (`e5dd085`). Trước đó bài kiểm lén đọc từ điển **đã cài trên máy**: máy có cài Lotus
@@ -247,20 +254,41 @@ Vá bỏ phụ thuộc X11 từng nằm ở đây đã vào bản gốc, nên kh
 
 
 - **`5563540` siết cứng dịch vụ systemd.** `systemd-analyze security` từ 7.0 MEDIUM xuống 2.0
-  OK, và đã cài chạy thật để chắc dịch vụ không hỏng. Hai chỉ thị cố ý KHÔNG bật vì cả hai đều
-  làm hỏng dịch vụ: `PrivateNetwork` (udev gửi sự kiện qua netlink, netlink theo từng không gian
-  mạng) và `ProtectProc` (cổng xác thực phải đọc `/proc/<pid>/exe` của tiến trình thuộc người
-  dùng khác). Lưu ý `PrivateTmp` làm nhật ký chuyển vào `/tmp/systemd-private-*/`, đọc phải có
+  OK, và đã cài chạy thật để chắc dịch vụ không hỏng. `PrivateNetwork` cố ý KHÔNG bật vì làm hỏng
+  dịch vụ (udev gửi sự kiện qua netlink, netlink theo từng không gian mạng). `ProtectProc` từng tắt
+  vì cổng xác thực đọc `/proc/<pid>/exe`; từ 26/09 cổng chỉ kiểm uid nên đã bật. Lưu ý `PrivateTmp` làm nhật ký chuyển vào `/tmp/systemd-private-*/`, đọc phải có
   quyền root và đường cũ ngừng cập nhật.
+- **Máy chủ kiểm con số nhận từ mô-đun (26/09, issue #463).** Chỉ nhận đúng một số nguyên từ 1 tới
+  1024 (phím xoá) hoặc từ -1 tới -1024 (bôi đen); số khác bị bỏ qua kèm cảnh báo. Đọc mã thì
+  trước đó một số âm khổng lồ khiến máy chủ xin bộ nhớ cho hàng trăm triệu phím và sẽ chết, kéo
+  bàn phím chết theo (chưa chạy thử đầu-cuối). Đã soi 7
+  chỗ mô-đun gửi: không chỗ nào gửi 0. Bài `server_key_request` đỏ 4 ca khi gỡ giới hạn.
+- **Máy chủ chỉ mở chuột, bàn chạm và núm trỏ (26/09).** Máy chủ dùng libinput để bắt cú bấm chuột,
+  và libinput mở MỌI thiết bị nhập, kể cả bàn phím: máy chủ cầm sẵn một đường đọc mọi phím gõ. Đo
+  bằng một máy chủ chạy riêng dưới tài khoản người dùng: trước khi sửa mở 12 thiết bị gồm
+  `AT Translated Set 2 keyboard`, sau khi sửa còn đúng bàn chạm và phần chuột của nó. Hai lớp: máy
+  chủ lọc theo thuộc tính udev (bỏ mọi nút có `ID_INPUT_KEYBOARD`, kể cả chuột kiêm bàn phím, nên
+  bấm chuột ngắt từ không chạy trên loại đó) và mở chỉ-đọc; luật udev cấp quyền đọc riêng trên chuột
+  và bàn chạm, `uinput_proxy` ra khỏi nhóm `input`. Sửa cả systemd, OpenRC, runit và Nix. Mới đo lớp
+  lọc trong mã; luật udev và việc đổi nhóm **chưa chạy thật**, OpenRC/runit/Nix chưa thử. Bài
+  `server_device_filter` đỏ 2 ca khi bỏ luật cấm bàn phím.
+- **Hai bên kiểm nhau bằng uid, bỏ `CAP_SYS_PTRACE` (26/09, issue #462).** Máy chủ từng nhận khách
+  khi `/proc/<pid>/exe` là `/usr/bin/fcitx5`: việc đọc đó cần `CAP_SYS_PTRACE`, mà không chặn được
+  gì vì chính người dùng bật được `/usr/bin/fcitx5` kèm addon tuỳ ý. Mô-đun thì không kiểm socket
+  phím xoá, và kiểm socket chuột bằng `/proc/<pid>/cmdline`, thứ ai cũng giả được. Nay máy chủ chỉ
+  nhận uid của người dùng đích; mô-đun chỉ nhận uid của `uinput_proxy` (tên lấy từ CMake), hoặc uid
+  của chính mình khi đặt `LOTUS_SOCKET_NAMESPACE` (cặp chạy thử). Bỏ `CAP_SYS_PTRACE` ở systemd,
+  OpenRC, runit; bật `ProtectProc=invisible`; gỡ hai lệnh `--replace-fail` của Nix trên các chuỗi
+  đã bỏ (lệnh trên `lotus-monitor.cpp` vốn đã hỏng từ `44433d6`). Đo 26/09 CachyOS: đọc
+  `/proc/<pid>/mem` bằng cap này bị chặn, nhưng `maps` thì đọc được. Chạy máy chủ riêng, khách
+  Python cùng uid: bản cũ từ chối ("Unauthorized executable"), bản mới nhận. Bỏ ngoại lệ cặp chạy
+  thử thì 9 bài kiểm tích hợp đỏ, tức là kiểm uid chạy thật trên socket. Bài `server_peer_trust`.
 - **`4a54d17` gỡ `FixUinputWithAck`, cờ Chromium và tệp `src/ack-apps.h`.** Công tắc này vốn mặc
   định TẮT nên gỡ đi hành vi không đổi. Đã soi cả 5 chỗ dùng để chắc mỗi chỗ đặc biệt hoá đúng
   cho nhánh tắt.
-- **`44433d6` lấy đường dẫn máy chủ từ CMake thay vì viết cứng `/usr/bin`.**
-  ⚠️ **Gửi lẻ commit này lên upstream sẽ làm gói Nix GÃY**, vì Nix dùng
-  `substituteInPlace --replace-fail` trên đúng chuỗi literal đó. Phải gửi kèm bản sửa tệp Nix
-  trong cùng một PR.
-- **`94dd9f1` biến môi trường `LOTUS_SERVER_PATH`** để chỉ định máy chủ mong đợi. Thiếu biến này
-  thì mô-đun từ chối socket chuột, và tính năng bấm chuột ngắt từ chết âm thầm.
+- **ĐÃ THAY — `44433d6` đường dẫn máy chủ từ CMake và `94dd9f1` biến `LOTUS_SERVER_PATH`.** Hai vá
+  này sửa phép kiểm đường dẫn chương trình; từ 26/09 mô-đun kiểm uid nên cả hai đã gỡ. Cặp chạy thử
+  giờ chỉ cần `LOTUS_SOCKET_NAMESPACE`.
 - **`07cca04` máy chủ hiểu `LOTUS_SOCKET_NAMESPACE`** giống mô-đun. Nhờ vậy chạy được một cặp
   mô-đun + máy chủ riêng bên cạnh bản đóng gói sẵn, không giẫm chân nhau.
 - **`7795460` núm vặn `LOTUS_BACKSPACE_GAP_MS`** để đo nhịp gửi phím xoá.
