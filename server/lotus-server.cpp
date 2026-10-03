@@ -192,23 +192,33 @@ void pin_to_pcore() {
 }
 
 int open_restricted(const char* path, int flags, void* user_data) {
-    auto*       udev = static_cast<struct udev*>(user_data);
+    auto* udev = static_cast<struct udev*>(user_data);
+    if (udev == nullptr) {
+        return -EACCES;
+    }
+    // Reading button presses needs no write access.
+    int fd = open(path, (flags & ~O_ACCMODE) | O_RDONLY);
+    if (fd < 0) {
+        return -errno;
+    }
+    // Check the node that was opened, so the path cannot be swapped after the check.
     struct stat st{};
-    if (udev == nullptr || stat(path, &st) != 0) {
+    if (fstat(fd, &st) != 0 || !S_ISCHR(st.st_mode)) {
+        close(fd);
         return -EACCES;
     }
     struct udev_device* device = udev_device_new_from_devnum(udev, 'c', st.st_rdev);
     if (device == nullptr) {
+        close(fd);
         return -ENODEV;
     }
     const bool allowed = shouldOpenInputDevice([device](const char* key) { return udev_device_get_property_value(device, key); });
     udev_device_unref(device);
     if (!allowed) {
+        close(fd);
         return -EACCES;
     }
-    // Reading button presses needs no write access.
-    int fd = open(path, (flags & ~O_ACCMODE) | O_RDONLY);
-    return fd < 0 ? -errno : fd;
+    return fd;
 }
 
 void close_restricted(int fd, void* /*user_data*/) {
