@@ -386,8 +386,9 @@ int main(int argc, char* argv[]) {
 
         // handle connect from addon
         if (fds[KB_CLIENT_INDEX].fd >= 0 && (fds[KB_CLIENT_INDEX].revents & (POLLIN | POLLHUP | POLLERR)) != 0) {
-            int     count = 0;
-            ssize_t n     = recv(fds[KB_CLIENT_INDEX].fd, &count, sizeof(count), 0);
+            int count = 0;
+            // MSG_TRUNC returns the real packet length, so an oversized request is seen as such.
+            ssize_t n = recv(fds[KB_CLIENT_INDEX].fd, &count, sizeof(count), MSG_TRUNC);
             if (n <= 0) {
                 LotusLogger::instance().warn("Keyboard client disconnected or connection error");
                 kb_client_fd.reset(-1);
