@@ -7,6 +7,8 @@
  */
 
 #include "lotus-server.h"
+#include "lotus-device-filter.h"
+#include "lotus-key-request.h"
 #include "lotus-logger.h"
 
 #include <cstdlib>
@@ -17,6 +19,7 @@
 
 #include <climits> // IWYU pragma: keep
 #include <sched.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <unistd.h>
 
@@ -119,7 +122,7 @@ void UinputDevice::send_select(int charCount) {
 
 LibinputContext::LibinputContext(const struct libinput_interface* interface) : udev_(udev_new()) {
     if (udev_ != nullptr) {
-        li_ = libinput_udev_create_context(interface, nullptr, udev_);
+        li_ = libinput_udev_create_context(interface, udev_, udev_);
         if (li_ != nullptr) {
             if (libinput_udev_assign_seat(li_, "seat0") != 0) {
                 libinput_unref(li_);
@@ -187,9 +190,34 @@ void pin_to_pcore() {
     }
 }
 
-int open_restricted(const char* path, int flags, void* /*user_data*/) {
-    int fd = open(path, flags);
-    return fd < 0 ? -errno : fd;
+int open_restricted(const char* path, int flags, void* user_data) {
+    auto* udev = static_cast<struct udev*>(user_data);
+    if (udev == nullptr) {
+        return -EACCES;
+    }
+    // Reading button presses needs no write access.
+    int fd = open(path, (flags & ~O_ACCMODE) | O_RDONLY);
+    if (fd < 0) {
+        return -errno;
+    }
+    // Check the node that was opened, so the path cannot be swapped after the check.
+    struct stat st{};
+    if (fstat(fd, &st) != 0 || !S_ISCHR(st.st_mode)) {
+        close(fd);
+        return -EACCES;
+    }
+    struct udev_device* device = udev_device_new_from_devnum(udev, 'c', st.st_rdev);
+    if (device == nullptr) {
+        close(fd);
+        return -ENODEV;
+    }
+    const bool allowed = shouldOpenInputDevice([device](const char* key) { return udev_device_get_property_value(device, key); });
+    udev_device_unref(device);
+    if (!allowed) {
+        close(fd);
+        return -EACCES;
+    }
+    return fd;
 }
 
 void close_restricted(int fd, void* /*user_data*/) {
@@ -200,6 +228,22 @@ const struct libinput_interface interface = {
     .open_restricted  = open_restricted,
     .close_restricted = close_restricted,
 };
+
+// Only the target user's processes may drive the keyboard. Checking the executable adds nothing:
+// the user can start /usr/bin/fcitx5 with any addon, and reading it needs CAP_SYS_PTRACE.
+static bool is_trusted_client(int fd, uid_t expected_uid, const char* socket_name) {
+    struct ucred cred{};
+    socklen_t    len = sizeof(struct ucred);
+    if (getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &cred, &len) != 0) {
+        LotusLogger::instance().warn(std::string("Failed to get peer credentials for ") + socket_name + " socket");
+        return false;
+    }
+    if (cred.uid != expected_uid) {
+        LotusLogger::instance().warn(std::string("Unauthorized UID connection attempt to ") + socket_name + " socket from UID: " + std::to_string(cred.uid));
+        return false;
+    }
+    return true;
+}
 
 int main(int argc, char* argv[]) {
     std::string target_user;
@@ -346,35 +390,8 @@ int main(int argc, char* argv[]) {
         if ((fds[0].revents & POLLIN) != 0) {
             int client_fd = accept4(server_fd.get(), nullptr, nullptr, SOCK_NONBLOCK);
             if (client_fd >= 0) {
-                struct ucred cred{};
-                socklen_t    len                = sizeof(struct ucred);
-                char         exe_path[PATH_MAX] = {0};
-
-                bool         authorized = false;
-                if (getsockopt(client_fd, SOL_SOCKET, SO_PEERCRED, &cred, &len) == 0) {
-                    if (cred.uid == expected_uid) {
-                        char path[64];
-                        snprintf(path, sizeof(path), "/proc/%d/exe", cred.pid);
-
-                        ssize_t ret = readlink(path, exe_path, sizeof(exe_path) - 1);
-                        if (ret != -1) {
-                            exe_path[ret] = '\0'; // NOLINT
-                        }
-
-                        if (strcmp(exe_path, "/usr/bin/fcitx5") == 0) {
-                            authorized = true;
-                        } else {
-                            LotusLogger::instance().warn("Unauthorized executable connection attempt to keyboard socket from: " + std::string(exe_path));
-                        }
-                    } else {
-                        LotusLogger::instance().warn("Unauthorized UID connection attempt to keyboard socket from UID: " + std::to_string(cred.uid));
-                    }
-                } else {
-                    LotusLogger::instance().warn("Failed to get peer credentials for keyboard socket");
-                }
-
-                if (authorized) {
-                    LotusLogger::instance().info("Fcitx5 connected to keyboard socket (PID: " + std::to_string(cred.pid) + ")");
+                if (is_trusted_client(client_fd, expected_uid, "keyboard")) {
+                    LotusLogger::instance().info("Fcitx5 connected to keyboard socket");
                     kb_client_fd.reset(client_fd);
                     fds[KB_CLIENT_INDEX].fd = kb_client_fd.get();
                 } else {
@@ -385,17 +402,23 @@ int main(int argc, char* argv[]) {
 
         // handle connect from addon
         if (fds[KB_CLIENT_INDEX].fd >= 0 && (fds[KB_CLIENT_INDEX].revents & (POLLIN | POLLHUP | POLLERR)) != 0) {
-            int     count = 0;
-            ssize_t n     = recv(fds[KB_CLIENT_INDEX].fd, &count, sizeof(count), 0);
+            int count = 0;
+            // MSG_TRUNC returns the real packet length, so an oversized request is seen as such.
+            ssize_t n = recv(fds[KB_CLIENT_INDEX].fd, &count, sizeof(count), MSG_TRUNC);
             if (n <= 0) {
                 LotusLogger::instance().warn("Keyboard client disconnected or connection error");
                 kb_client_fd.reset(-1);
                 fds[KB_CLIENT_INDEX].fd = -1;
-            } else if (count < 0) {
-                uinput.send_select(-count); // negative = select |count| chars
             } else {
-                pending_backspaces += count - 1;
-                uinput.send_backspace();
+                const KeyRequest request = parseKeyRequest(n, count);
+                if (request.kind == KeyRequest::Kind::Select) {
+                    uinput.send_select(request.count);
+                } else if (request.kind == KeyRequest::Kind::Backspace) {
+                    pending_backspaces += request.count - 1;
+                    uinput.send_backspace();
+                } else {
+                    LotusLogger::instance().warn("Ignoring invalid key request: " + std::to_string(count) + " (" + std::to_string(n) + " bytes)");
+                }
             }
         }
 
@@ -403,34 +426,7 @@ int main(int argc, char* argv[]) {
         if ((fds[2].revents & POLLIN) != 0) {
             int new_fd = accept4(mouse_server_fd.get(), nullptr, nullptr, SOCK_NONBLOCK);
             if (new_fd >= 0) {
-                struct ucred cred{};
-                socklen_t    len                = sizeof(struct ucred);
-                char         exe_path[PATH_MAX] = {0};
-
-                bool         authorized = false;
-                if (getsockopt(new_fd, SOL_SOCKET, SO_PEERCRED, &cred, &len) == 0) {
-                    if (cred.uid == expected_uid) {
-                        char path[64];
-                        snprintf(path, sizeof(path), "/proc/%d/exe", cred.pid);
-
-                        ssize_t ret = readlink(path, exe_path, sizeof(exe_path) - 1);
-                        if (ret != -1) {
-                            exe_path[ret] = '\0'; // NOLINT
-                        }
-
-                        if (strcmp(exe_path, "/usr/bin/fcitx5") == 0) {
-                            authorized = true;
-                        } else {
-                            LotusLogger::instance().warn("Unauthorized executable connection attempt to mouse socket from: " + std::string(exe_path));
-                        }
-                    } else {
-                        LotusLogger::instance().warn("Unauthorized UID connection attempt to mouse socket from UID: " + std::to_string(cred.uid));
-                    }
-                } else {
-                    LotusLogger::instance().warn("Failed to get peer credentials for mouse socket");
-                }
-
-                if (authorized) {
+                if (is_trusted_client(new_fd, expected_uid, "mouse")) {
                     LotusLogger::instance().info("New mouse flag client connected");
                     addon_fd.reset(new_fd);
                 } else {
