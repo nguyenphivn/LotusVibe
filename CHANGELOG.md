@@ -21,8 +21,6 @@ Fork chưa có số phiên bản riêng. `CMakeLists.txt` vẫn giữ số phiê
 
 ### Sửa lỗi
 
-- Máy chủ nền giữ kết nối phím đầu tiên cho tới khi nó ngắt và từ chối kết nối đến sau. Trước đây
-  chương trình nối sau fcitx5 chiếm luôn kênh, fcitx5 mất backspace mà không biết (#10).
 - Luật udev không còn cấp `/dev/uinput` và mọi thiết bị nhập cho cả nhóm `input`, khớp bản gốc
   (LotusInputMethod/fcitx5-lotus#525) (#10).
 - Máy chủ nền và mô-đun bộ gõ nhận nhau theo tài khoản (uid) của tiến trình bên kia, thay cho đường
