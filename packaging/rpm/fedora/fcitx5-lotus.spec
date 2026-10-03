@@ -96,12 +96,15 @@ Ngó Sen is a Vietnamese input method for fcitx5, forked from fcitx5-lotus.
 %systemd_post fcitx5-lotus-server@.service
 
 # Earlier packages put the service user in group input, which can read every keyboard.
-if id -nG uinput_proxy 2>/dev/null | grep -qw input; then
+if id -nG uinput_proxy 2>/dev/null | tr ' ' '\n' | grep -qx input; then
     gpasswd -d uinput_proxy input >/dev/null 2>&1 || :
 fi
-# The pointer ACLs come from udev rules, which otherwise only reach devices plugged in later.
+# The ACLs come from udev rules, which otherwise only reach devices plugged in later. Only the
+# devices those rules act on are replayed.
 udevadm control --reload-rules >/dev/null 2>&1 || :
-udevadm trigger --subsystem-match=misc --subsystem-match=input >/dev/null 2>&1 || :
+udevadm trigger --subsystem-match=misc --sysname-match=uinput >/dev/null 2>&1 || :
+udevadm trigger --subsystem-match=input --property-match=ID_INPUT_MOUSE=1 \
+    --property-match=ID_INPUT_TOUCHPAD=1 --property-match=ID_INPUT_POINTINGSTICK=1 >/dev/null 2>&1 || :
 
 if [ $1 -eq 1 ]; then
     echo "--- Cấu hình Ngó Sen ---"
