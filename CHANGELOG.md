@@ -1,6 +1,6 @@
 # Nhật ký thay đổi
 
-Mọi thay đổi đáng kể của LotusVibe, bản fork của
+Mọi thay đổi đáng kể của Ngó Sen (tên cũ LotusVibe), tách ra từ
 [fcitx5-lotus](https://github.com/LotusInputMethod/fcitx5-lotus), được ghi ở đây. Cách ghi theo
 [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/). Mỗi dòng nói người dùng thấy gì thay đổi;
 lý do và số đo của từng miếng vá nằm trong [KHAC-GI-SO-VOI-BAN-GOC.md](KHAC-GI-SO-VOI-BAN-GOC.md).

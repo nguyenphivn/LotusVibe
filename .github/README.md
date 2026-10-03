@@ -1,17 +1,29 @@
-# LotusVibe — bản fork fcitx5-lotus dùng hằng ngày
+# Ngó Sen — bộ gõ tiếng Việt cho fcitx5
 
-Đây là bản fork của [fcitx5-lotus](https://github.com/LotusInputMethod/fcitx5-lotus), bộ gõ tiếng
-Việt cho fcitx5, chạy hằng ngày trên CachyOS + KDE Plasma Wayland và trên một iMac Ubuntu 24.04 +
-GNOME X11.
+Người giữ dự án chỉ **vibecode** dự án này: nêu việc cho trợ lý AI viết mã, rồi đo và dùng thử hằng
+ngày.
 
-Tên LotusVibe nghĩa là bản này **chỉ sửa bằng vibecode**. Đổi tên kho ngày 17/09/2026 (tên cũ
-`nguyenphivn/fcitx5-lotus`, link cũ vẫn tự chuyển về đây). Bên trong mã vẫn giữ tên `lotus` như bản
-gốc, nên cài vào máy là thay cho bản Lotus gốc, không cài song song được.
+Ngó Sen tách ra từ [fcitx5-lotus](https://github.com/LotusInputMethod/fcitx5-lotus); fcitx5-lotus lại
+là bản fork của [bộ gõ VMK](https://github.com/thanhpy2009/VMK). Ngó sen là mầm mọc ra từ cây sen:
+cùng gốc với Lotus nhưng đi hướng riêng. Giấy phép vẫn là GPL-3.0-or-later, và mọi dòng bản quyền của
+các tác giả trước được giữ nguyên.
+
+Bản này chạy hằng ngày trên CachyOS + KDE Plasma Wayland và trên một iMac Ubuntu 24.04 + GNOME X11.
+Kho để công khai cho ai cần thì lấy dùng, **không hứa hỗ trợ**: mục Issues tắt và không có lịch phát
+hành.
+
+Tên cũ của kho là `nguyenphivn/fcitx5-lotus`, rồi `nguyenphivn/LotusVibe` (từ 17/09/2026); link cũ
+vẫn tự chuyển về đây. Bên trong mã vẫn giữ tên `lotus` (tệp cấu hình, dịch vụ nền, icon) để nhặt được
+bản vá của bản gốc và để cấu hình cũ dùng tiếp. Vì vậy cài Ngó Sen là thay cho Lotus gốc, không cài
+song song được.
 
 Trang này chỉ ghi **những gì khác với bản gốc**. Hướng dẫn dùng bộ gõ nói chung xem
-[README của bản gốc](https://github.com/nguyenphivn/LotusVibe/blob/ban-dung/README.md) hoặc
-[trang chủ Lotus](https://lotusinputmethod.github.io/).
+[README của bản gốc](https://github.com/LotusInputMethod/fcitx5-lotus#readme) hoặc
+[trang chủ Lotus](https://lotusinputmethod.github.io/); phần cài đặt ở đó là cài bản gốc, còn cài Ngó
+Sen thì xem [mục Cài](#cài).
 
+- **Tên mới (03/10):** trong fcitx5 bộ gõ hiện tên **Ngó Sen**, gói Fedora tên `fcitx5-ngosen`. Cấu
+  hình cũ dùng tiếp, không phải chỉnh gì.
 - **Mới (24/09): chỉ còn một chế độ uinput.** Ba chế độ `Uinput (Smooth)`, `Uinput (Super Smooth)`
   và `Uinput (Slow)` gộp thành một chế độ `Uinput`, chạy như Super Smooth. Cấu hình cũ tự chuyển,
   không phải chỉnh gì. [Xem bên dưới](#nên-dùng-chế-độ-nào).
@@ -21,24 +33,25 @@ Trang này chỉ ghi **những gì khác với bản gốc**. Hướng dẫn dù
 - **Cài hoặc cập nhật xong phải khởi động lại máy chủ nền:**
   `sudo systemctl restart fcitx5-lotus-server@$(whoami).service`, rồi khởi động lại fcitx5.
   [Vì sao](#cài).
-- **Nhánh để dùng:** `ban-dung` (nhánh mặc định) = `dev` của bản gốc + 23 miếng vá.
+- **Nhánh để dùng:** `ban-dung` (nhánh mặc định). Tách từ nhánh `dev` của bản gốc; từ 03/10/2026 chỉ
+  nhặt vá của bản gốc có chọn lọc, không gộp cả nhánh.
 - **Chi tiết từng vá, số đo, tác giả gốc trả lời ra sao, và hướng dẫn cài:**
-  [KHAC-GI-SO-VOI-BAN-GOC.md](https://github.com/nguyenphivn/LotusVibe/blob/ban-dung/KHAC-GI-SO-VOI-BAN-GOC.md)
+  [KHAC-GI-SO-VOI-BAN-GOC.md](https://github.com/ngosen/ngosen/blob/ban-dung/KHAC-GI-SO-VOI-BAN-GOC.md)
 
 ## Nên dùng chế độ nào
 
 **Khuyên dùng `Uinput` làm chế độ gõ chính.** Đây là chế độ bản này dùng hằng ngày cho trình duyệt
 (Firefox, Edge), web app như Lark, và terminal như Alacritty.
 
-- Đặt chung: trong cài đặt Lotus chọn chế độ mặc định là `Uinput`. Nếu sửa tay
-  `~/.config/fcitx5/conf/lotus.conf` thì ghi `Mode=Uinput`; ghi sai tên Lotus sẽ lặng lẽ quay về
+- Đặt chung: trong cài đặt Ngó Sen chọn chế độ mặc định là `Uinput`. Nếu sửa tay
+  `~/.config/fcitx5/conf/lotus.conf` thì ghi `Mode=Uinput`; ghi sai tên thì bộ gõ lặng lẽ quay về
   Preedit.
 - Đặt theo từng app: trong `~/.config/fcitx5/conf/lotus-app-rules.conf` dùng số `2`, ví dụ
   `firefox=2`.
 - Kiểu gõ chính là **Telex** (`InputMethod=Telex` trong `lotus.conf`). Mọi lượt đo và dùng hằng ngày
   của bản này đều gõ Telex; VNI và các kiểu gõ khác chưa kiểm.
 - Không khuyên chế độ Surrounding Text: bản này không sửa chế độ đó.
-- Lời khuyên này chỉ đúng cho bản fork. Super Smooth của bản gốc chưa có vá chống lặp chữ ở thanh
+- Lời khuyên này chỉ đúng cho Ngó Sen. Super Smooth của bản gốc chưa có vá chống lặp chữ ở thanh
   địa chỉ trình duyệt.
 
 **Chỉ còn một chế độ uinput (24/09).** Ba chế độ `Uinput (Smooth)`, `Uinput (Super Smooth)` và
@@ -119,10 +132,10 @@ Chưa đo Firefox và Chrome. Đã báo cả hai cách ở #267, chưa gửi mã
 - **Bỏ khoảng chờ vô ích ở app không có surrounding text.** Edge chạy qua XWayland: độ trễ trung vị
   12,8 → 6,9 ms. Bản gốc từ chối (#490).
 - **Chữ V hết màu đen trên panel tối của KDE** (issue #374, gặp ngay với giao diện mặc định Fedora
-  44). Lotus đọc màu của panel thay vì màu cửa sổ ứng dụng. Chụp trước và sau trên máy thật: V đen
+  44). Bộ gõ đọc màu của panel thay vì màu cửa sổ ứng dụng. Chụp trước và sau trên máy thật: V đen
   thành V trắng. Mã sửa đã vào bản gốc (PR #497); bản này chỉ giữ thêm bài kiểm.
 - **Chữ V hết màu đen trên thanh trên cùng của GNOME** (Ubuntu Yaru, theme WhiteSur). Cùng lỗi với
-  KDE: Lotus hỏi màu ứng dụng thay vì màu thanh. Giờ đọc thẳng theme của GNOME Shell. Chưa gửi lên bản
+  KDE: bộ gõ hỏi màu ứng dụng thay vì màu thanh. Giờ đọc thẳng theme của GNOME Shell. Chưa gửi lên bản
   gốc.
 - **Gõ đúng trong LibreOffice với chế độ uinput** (issue #162: `chao` + `f` ra `chaà`). Nguyên nhân
   không phải máy chậm: LibreOffice xử lý phím xoá theo kiểu hẹn sau, còn chữ mới chèn ngay nên vượt
@@ -161,7 +174,7 @@ Cả hai nằm ở [PR #492](https://github.com/LotusInputMethod/fcitx5-lotus/pu
 ## Cài
 
 Làm theo mục
-[Cài sang máy khác](https://github.com/nguyenphivn/LotusVibe/blob/ban-dung/KHAC-GI-SO-VOI-BAN-GOC.md#cài-sang-máy-khác).
+[Cài sang máy khác](https://github.com/ngosen/ngosen/blob/ban-dung/KHAC-GI-SO-VOI-BAN-GOC.md#cài-sang-máy-khác).
 Nhớ gỡ bản Lotus đóng gói sẵn trước, và cài vào `/usr`.
 
 **Cài xong, hoặc mỗi lần cập nhật, phải khởi động lại máy chủ nền** (chương trình chạy ngầm bấm
@@ -172,6 +185,14 @@ sudo systemctl restart fcitx5-lotus-server@$(whoami).service
 fcitx5 -rd
 ```
 
-Cài gói mới chỉ thay tệp trên đĩa. Máy chủ đang chạy vẫn là bản cũ cho tới khi khởi động lại. Bản
-fork thêm lệnh bôi đen cho vá Messenger; máy chủ bản gốc không hiểu lệnh này, nó xoá nhầm một chữ
+Cài gói mới chỉ thay tệp trên đĩa. Máy chủ đang chạy vẫn là bản cũ cho tới khi khởi động lại. Ngó
+Sen thêm lệnh bôi đen cho vá Messenger; máy chủ bản gốc không hiểu lệnh này, nó xoá nhầm một chữ
 rồi đếm sai số phím xoá, làm chữ bị sai ở mọi ứng dụng cho tới khi khởi động lại.
+
+## English
+
+Ngó Sen is a Vietnamese input method for fcitx5. The maintainer only **vibecodes** this project: most
+of the code is written with an AI coding agent, then measured and used daily by the maintainer. It is
+a fork of [fcitx5-lotus](https://github.com/LotusInputMethod/fcitx5-lotus), itself a fork of
+[VMK](https://github.com/thanhpy2009/VMK), and stays under GPL-3.0-or-later. It is published as is,
+with no promise of support. The rest of this page is in Vietnamese.
