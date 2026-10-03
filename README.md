@@ -5,8 +5,8 @@ ngày.
 
 Ngó Sen tách ra từ [fcitx5-lotus](https://github.com/LotusInputMethod/fcitx5-lotus); fcitx5-lotus lại
 là bản fork của [bộ gõ VMK](https://github.com/thanhpy2009/VMK). Ngó sen là mầm mọc ra từ cây sen:
-cùng gốc với Lotus nhưng đi hướng riêng. Giấy phép vẫn là GPL-3.0-or-later, và mọi dòng bản quyền của
-các tác giả trước được giữ nguyên.
+cùng gốc với Lotus nhưng đi hướng riêng. Giấy phép vẫn là GPL-3.0-or-later, và tệp nào còn trong
+kho thì giữ nguyên dòng bản quyền của tác giả trước.
 
 Bản này chạy hằng ngày trên CachyOS + KDE Plasma Wayland và trên một iMac Ubuntu 24.04 + GNOME X11.
 Kho để công khai cho ai cần thì lấy dùng, **không hứa hỗ trợ**: mục Issues tắt và không có lịch phát
